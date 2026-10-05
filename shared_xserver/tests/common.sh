@@ -11,34 +11,9 @@ fail() {
 }
 
 load_design_env() {
-	export USER="${USER:-designer}"
 	export HOME="${HOME:-/home/designer}"
-	export PDK_ROOT="${PDK_ROOT:-/opt/pdks}"
-	export PDK="${PDK:-ihp-sg13g2}"
-	export TOOLS="${TOOLS:-/opt}"
-
-	if [[ -e "${HOME}/.nix-profile/etc/profile.d/nix.sh" ]]; then
-		# shellcheck disable=SC1091
-		source "${HOME}/.nix-profile/etc/profile.d/nix.sh"
-	fi
-
-	# The image .bashrc appends EDA tool PATHs and calls set_pdk. It is not
-	# guarded for non-interactive shells, so it can be sourced from tests.
-	if [[ -f "${HOME}/.bashrc" ]]; then
-		set +eu
-		# shellcheck disable=SC1091
-		source "${HOME}/.bashrc"
-		set -eu
-	fi
-
-	export PDKPATH="${PDK_ROOT}/${PDK}"
-
-	local tool_bin
-	for tool_bin in "${TOOLS}/magic/"*/bin "${TOOLS}/ngspice/"*/bin; do
-		if [[ -d "${tool_bin}" ]]; then
-			export PATH="${tool_bin}:${PATH}"
-		fi
-	done
+	# shellcheck disable=SC1091
+	source /opt/unic-cass/config/unic-cass-env.sh
 }
 
 require_command() {

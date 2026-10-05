@@ -1,6 +1,9 @@
 {
-	"name": "usm-vlsi-tools for Windows",
-	"image": "isaiassh/unic-cass-tools:latest",
+	"name": "UNIC-CASS IC Design Tools for Windows",
+	"image": "isaiassh/unic-cass-tools:1.3.0",
+	"remoteUser": "designer",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/designer/shared,type=bind",
+	"workspaceFolder": "/foss/designs",
 	"features": {},
 	"customizations": {
 		"vscode": {
@@ -21,7 +24,7 @@
 	"updateRemoteUserUID": true,
 	"containerEnv": {
 		"SHELL": "/bin/bash",
-		"PDK": "sky130A",
+		"PDK": "ihp-sg13g2",
 		"DISPLAY": "host.docker.internal:0",
 		"LIBGL_ALWAYS_INDIRECT": "1"
 	}

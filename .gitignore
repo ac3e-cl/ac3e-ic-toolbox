@@ -64,3 +64,7 @@ shared_xserver/tests/run/
 
 # Local drafts for tracked repository improvement plans
 .issues/drafts/
+
+# Local plans and Python test caches
+.hermes/
+**/__pycache__/

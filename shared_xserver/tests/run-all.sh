@@ -11,6 +11,10 @@ tests=(
 	klayout-ihp-drc.sh
 	ngspice-ihp-mosfet.sh
 	librelane-smoke.sh
+	pdk-environment.sh
+	ngspice-gf180-mosfet.sh
+	klayout-gf180-tech.sh
+	librelane-gf180-smoke.sh
 )
 
 passed=0

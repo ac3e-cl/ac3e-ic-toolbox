@@ -282,20 +282,6 @@ RUN --mount=type=bind,source=images/xyce,target=/images/xyce \
     bash /images/xyce/install.sh
     
 #######################################################################
-# Compile klayout
-#######################################################################
-# FROM builder AS klayout
-
-# ARG KLAYOUT_REPO_URL \
-#     KLAYOUT_REPO_COMMIT \
-#     KLAYOUT_DOWNLOAD \
-#     KLAYOUT_NAME
-
-# RUN --mount=type=bind,source=images/klayout,target=/images/klayout \
-#     bash /images/klayout/install.sh
-
-
-#######################################################################
 # Compile xschem
 #######################################################################
 FROM builder AS xschem
@@ -501,9 +487,21 @@ RUN mkdir -p /run/user/1000 && \
 # Fix IHP permissions (after designer user is created)
 RUN chown -R designer:designer /opt/pdks/ihp-sg13g2/
 
-RUN --mount=type=bind,source=images/final_structure/configure,target=/images/final_structure/configure \
-    bash -c 'cat images/final_structure/configure/.bashrc' >> /home/designer/.bashrc && \
-    bash -c 'cat images/final_structure/configure/.bashrc' >> /root/.bashrc
+# One runtime configuration for interactive, login and batch shells.
+COPY images/final_structure/configure/pdk.sh /opt/unic-cass/config/
+COPY images/final_structure/configure/unic-cass-env.sh /opt/unic-cass/config/
+COPY images/final_structure/configure/profile.sh /opt/unic-cass/config/
+COPY images/final_structure/configure/profile.sh /etc/profile.d/unic-cass-tools.sh
+COPY images/final_structure/configure/.bashrc /home/designer/.bashrc
+COPY images/final_structure/configure/.bashrc /root/.bashrc
+RUN mkdir -p /foss && \
+    ln -s /opt /foss/tools && \
+    ln -s /opt/pdks /foss/pdks && \
+    ln -s /home/designer/shared /foss/designs && \
+    ln -s /home/designer /headless && \
+    mkdir -p /home/designer/shared /home/designer/.klayout && \
+    chown designer:designer /home/designer/shared /home/designer/.klayout /home/designer/.bashrc
+ENV DESIGNS=/foss/designs
 
 # Patch IHP PDK for KLayout DRC compatibility
 RUN --mount=type=bind,source=images/final_structure/configure,target=/images/final_structure/configure \
@@ -589,10 +587,7 @@ USER root
 RUN --mount=type=bind,source=images/final_structure/configure,target=/images/final_structure/configure \
     sed 's/\r$//' /images/final_structure/configure/etc_bash.bashrc_nix > /etc/bash.bashrc && \
     sed 's/\r$//' /images/final_structure/configure/.bashrc > /home/designer/.bashrc && \
-    chown designer:designer /home/designer/.bashrc
+    chown designer:designer /home/designer/.bashrc && \
+    chmod o+x /home/designer
 
-USER designer
-
-FROM unic-cass-tools-nix AS unic-cass-tools-temp
-USER root
 USER designer

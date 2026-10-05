@@ -52,14 +52,68 @@ to the Dockerfile. Values in `.env` are optional workstation overrides.
 
 ### Linux
 
+### Compatible launch commands
+
+All launchers share the same runtime configuration; Make targets remain aliases:
+
+| Launcher | Make alias | Mode |
+| --- | --- | --- |
+| `./start_x.sh` | `make start` | X11 applications from the host terminal |
+| `./start_vnc.sh` | `make start-vnc` | XFCE desktop over VNC/noVNC |
+| `./start_shell.sh` | `make start-raw` | Shell only, without GUI sockets |
+| `./start_jupyter.sh` | `make start-notebook` | Authenticated Jupyter Lab |
+
+Runtime scripts read optional `.env` settings without evaluating shell code;
+explicit environment overrides take precedence. `DESIGNS` names the host design
+directory; `SHARED_DIR` remains a legacy alias. Do not set them to different
+directories. Shells use the host UID/GID by default (`CONTAINER_USER` and
+`CONTAINER_GROUP` override them); `ROOT=1` explicitly requests root.
+Launchers provide a private, ephemeral tmpfs HOME owned by that UID/GID and
+reuse the installed Nix profile for executable access. Designs persist in the
+project mount; HOME settings disappear when the container stops. The image home
+permits traversal, not listing or writing, for other users. Direct `docker run
+--user` calls must provide equivalent HOME configuration; use the launchers.
+
+```bash
+DESIGNS="$HOME/eda/designs" PDK=gf180mcuD ./start_shell.sh
+DRY_RUN=1 ./start_vnc.sh       # Inspect command without Docker/mkdir side effects
+ENABLE_GUI=1 BUILD_IMAGE_TAG=unic-cass-compat:gui ./build/build-image.sh
+```
+
+VNC requires an image built with `ENABLE_GUI=1`; changing that variable when
+starting a headless image does not install a desktop. Builds never append an
+automatic `_vnc` suffix: select your desired image tag explicitly. Service ports
+bind to loopback by default: HTTP 8080 (`HTTP_PORT`, legacy `WEBSERVER_PORT`),
+VNC 5901 and Jupyter 8888; setting a host port to 0 disables its publication.
+Jupyter keeps its standard authentication. Neither passwords nor tokens should
+be placed in shared logs. `DOCKER_EXTRA_PARAMS` is whitespace-separated without
+shell expansion; quoted strings within it are not interpreted as Bash code.
+
+Inside the container, `/foss/designs` and `/home/designer/shared` refer to the same
+mount; `/foss/pdks`, `/foss/tools` and `/headless` link to the existing local paths.
+A project may place a trusted Bash `.designinit` under `$DESIGNS`, for example:
+
+```bash
+export PDK=gf180mcuD
+export STD_CELL_LIBRARY=gf180mcu_fd_sc_mcu7t5v0
+```
+
+This hook executes code once per shell. It is not sandboxed; do not run untrusted
+projects. Opening a shell never recompiles IHP OSDI models. Unsupported upstream
+PDKs/tools are not installed. See [compatibility boundaries](docs/compatibility-iic-osic.md)
+and [cleanup audit](docs/cleanup-audit.md).
+
+### Linux quick start
+
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/unic-cass/uniccass-icdesign-tools.git
    cd uniccass-icdesign-tools
    ```
 
-2. **Build and run the Docker environment:**
+2. **Build (optional if using the published image) and run:**
    ```bash
+   make build
    make start
    ```
 
@@ -85,7 +139,7 @@ to the Dockerfile. Values in `.env` are optional workstation overrides.
    cd uniccass-icdesign-tools
    ```
 
-4. **Build and run:**
+4. **Run from WSL2:**
    ```bash
    make start
    ```
@@ -124,7 +178,7 @@ to the Dockerfile. Values in `.env` are optional workstation overrides.
    cd uniccass-icdesign-tools
    ```
 
-3. **Build and run the Docker environment:**
+3. **Run the Docker environment:**
    ```bash
    make start
    ```
@@ -138,11 +192,11 @@ to the Dockerfile. Values in `.env` are optional workstation overrides.
 | Tool         | Description                                         | Source |
 |--------------|-----------------------------------------------------|--------|
 | **librelane** | Complete RTL-to-GDSII ASIC implementation flow     | Nix    |
-| openroad     | Physical design platform (integrated with LibreLane)| Nix    |
+| openroad     | Physical design platform; standalone and LibreLane environments | System / Nix |
 | ngspice      | SPICE analog and mixed-signal simulator             | System |
 | xschem       | Schematic Editor                                    | System |
 | magic        | Layout editor with DRC/Extraction capabilities      | System |
-| klayout      | Layout viewer and editor for GDS                    | Nix    |
+| klayout      | Layout viewer and editor for GDS                    | System; LibreLane uses its Nix environment |
 | netgen       | Netlist Comparison                                  | System |
 | yosys        | RTL synthesis framework                             | System |
 | verilator    | Verilog simulator                                   | System |
@@ -171,13 +225,20 @@ librelane <config.json>    # Run a design flow
 
 ### PDK Management
 
-The image contains the `sky130A`, `gf180mcuD`, and `ihp-sg13g2` PDKs. To change between PDKs, use the `set_pdk` command:
+The image contains the `sky130A`, `gf180mcuD`, and `ihp-sg13g2` PDKs. GF180MCU D is a supported PDK, not a deprecated optional download. To change between PDKs, use `sak-pdk` (compatible with IIC-OSIC-TOOLS) or the equivalent legacy `set_pdk` function:
 
 ```bash
-set_pdk ihp-sg13g2   # Default PDK
-set_pdk sky130A
-set_pdk gf180mcuD
+sak-pdk             # List installed supported PDKs
+sak-pdk ihp-sg13g2   # Default PDK
+sak-pdk sky130A
+sak-pdk gf180mcuD gf180mcu_fd_sc_mcu7t5v0
+set_pdk gf180mcuD    # Equivalent legacy interface
 ```
+
+Selection updates `PDK`, `PDKPATH`, `STD_CELL_LIBRARY`,
+`SPICE_USERINIT_DIR` and `KLAYOUT_PATH`; GF D sets `GF_PDK_OPTION=D`.
+Unsupported PDKs (including GF C) fail without changing the previous selection.
+An optional second argument must name an installed standard-cell library.
 
 The IHP PDK Verilog-A models are compiled into OSDI binaries during the image build (`ihp_pdk` stage). The canonical location is `libs.tech/ngspice/osdi/`; a compatibility symlink at `libs.tech/ngspice/openvaf/` points to the same files for older schematics that reference the legacy path.
 
@@ -201,6 +262,15 @@ The scripts in `shared_xserver/tests/` run inside a container that mounts this d
 ```
 
 Generated files are written to `shared_xserver/tests/run/` and are gitignored. `run-all.sh` is the entry point for pipelines.
+
+The suite also verifies the three PDK environments, a GF180MCU MOSFET operating
+point, GF KLayout technology/PCells and an explicit GF LibreLane counter flow
+with final metrics and GDS checks. Host runtime contracts run without EDA tools:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+CHECK_ONLY=1 ./build/build-image.sh
+```
 
 ---
 

@@ -78,9 +78,13 @@ jobs:
         run: |
           set -Eeuo pipefail
           jq -e . manifest.json >/dev/null
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
           bash -n \
+            start_*.sh runtime/*.sh \
             build/*.sh \
             images/*/install.sh \
+            images/pdks/*.sh \
+            images/final_structure/configure/.bashrc \
             images/final_structure/configure/*.sh \
             images/final_structure/install/*.sh \
             shared_xserver/tests/*.sh
@@ -99,11 +103,6 @@ jobs:
         run: |
           set -Eeuo pipefail
           test_output="${GITHUB_WORKSPACE}/shared_xserver/tests/run"
-          cleanup() {
-            sudo rm -rf "${test_output}"
-          }
-          trap cleanup EXIT
-
           mkdir -p "${test_output}"
           chmod 0777 "${test_output}"
           docker run --rm \
@@ -112,6 +111,14 @@ jobs:
             --entrypoint /bin/bash \
             "${IMAGE}" \
             -lc '/home/designer/shared/tests/run-all.sh'
+
+      - name: Preserve failed integration output
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-failure-output
+          path: shared_xserver/tests/run/
+          if-no-files-found: ignore
 
       - name: Log in to Docker Hub
         env:
@@ -127,3 +134,7 @@ jobs:
       - name: Log out from Docker Hub
         if: ${{ always() }}
         run: docker logout
+
+      - name: Clean integration output
+        if: ${{ always() }}
+        run: sudo rm -rf "${GITHUB_WORKSPACE}/shared_xserver/tests/run"

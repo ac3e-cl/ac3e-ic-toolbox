@@ -1,15 +1,6 @@
-# Minimal /etc/bash.bashrc that loads Nix only
-# This prevents conflicts between system tools and Nix tools
-
-# If not running interactively, don't do anything
-case $- in
-    *i*) ;;
-      *) return;;
-esac
-
-# Load Nix for all users
-export USER=${USER:-$(id -un 2>/dev/null || echo designer)}
-if [ -n "$HOME" ] && [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
-  . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+# shellcheck shell=bash
+if [[ -f /opt/unic-cass/config/profile.sh ]]; then
+    source /opt/unic-cass/config/profile.sh
+else
+    source "${BASH_SOURCE[0]%/*}/profile.sh"
 fi
-

@@ -1,0 +1,11 @@
+.git
+.hermes
+.env
+_build_logs
+**/*.log
+**/__pycache__
+**/.ipynb_checkpoints
+shared_xserver/tests/run
+IDEA.md
+shared_xserver/IPD413_202501
+.issues/drafts
