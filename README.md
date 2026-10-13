@@ -1,10 +1,10 @@
-# UNIC-CASS IC Design Tools
+# AC3E IC Design Tools
 
 [![Docker Image Version](https://img.shields.io/docker/v/isaiassh/unic-cass-tools?sort=semver&style=flat-square&logo=docker&label=Release)](https://hub.docker.com/r/isaiassh/unic-cass-tools/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg?style=flat-square)](LICENSE)
-[![Issues](https://img.shields.io/github/issues/unic-cass/uniccass-icdesign-tools?style=flat-square&label=Issues&logo=github)](https://github.com/unic-cass/uniccass-icdesign-tools/issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/unic-cass/uniccass-icdesign-tools?style=flat-square&label=PRs&logo=github)](https://github.com/unic-cass/uniccass-icdesign-tools/pulls)
-[![Contributors](https://img.shields.io/github/contributors/unic-cass/uniccass-icdesign-tools?style=flat-square&label=Contributors&logo=github)](https://github.com/unic-cass/uniccass-icdesign-tools/graphs/contributors)
+[![Issues](https://img.shields.io/github/issues/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=Issues&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=PRs&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/pulls)
+[![Contributors](https://img.shields.io/github/contributors/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=Contributors&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/graphs/contributors)
 [![Docker Pulls](https://img.shields.io/docker/pulls/isaiassh/unic-cass-tools?style=flat-square&label=Pulls&logo=docker)](https://hub.docker.com/r/isaiassh/unic-cass-tools)
 
 ---
@@ -18,27 +18,28 @@ can access it; GUI applications require a working X server and `DISPLAY`.
 Download the bootstrap from `main`, optionally inspect it, then run it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/unic-cass/uniccass-icdesign-tools/main/quickstart.sh -o quickstart.sh
+curl -fsSL https://raw.githubusercontent.com/ac3e-cl/ac3e-ic-toolbox/main/quickstart.sh -o quickstart.sh
 bash quickstart.sh
 ```
 
-The script clones the latest `main` into `./uniccass-icdesign-tools` and runs
+The script clones the latest `main` into `./ac3e-ic-toolbox` and runs
 `make start`, using the published image version selected by that checkout.
 Docker downloads the image only when it is absent locally; the first download
 can be large. No toolchain compilation or local image build is needed.
 An existing destination is never overwritten. Choose another directory with
 `bash quickstart.sh "$HOME/eda-tools"`.
 
-For later sessions, run `cd uniccass-icdesign-tools && make start`.
+For later sessions, run `cd ac3e-ic-toolbox && make start`.
 Designs persist in `shared/`; remove an existing stopped container explicitly
 with `make rm` before recreating it, or use `make attach` to resume it.
 For a terminal without an X server, clone the repository and use `make start-raw`.
 The bootstrap URL becomes available when this change is merged into `main`.
 
-The UNIC-CASS IC Design Tools repository provides a comprehensive, open-source suite of tools for Integrated Circuit (IC) design, simulation, and verification. This project is part of the Universalization of IC Design from CASS (UNIC-CASS) program—a structured, end-to-end IC design-to-test experiential learning initiative.
+The AC3E IC Design Tools repository provides a comprehensive, open-source suite of tools for integrated circuit design, simulation, and verification.
 
 This work is based on:
 
+- [Previous UNIC-CASS IC Design Tools project](https://github.com/unic-cass/uniccass-icdesign-tools)
 - [Johannes Kepler University (JKU) IIC-OSIC-TOOLS Docker Image](https://github.com/iic-jku/IIC-OSIC-TOOLS)
 - [LibreLane ASIC Implementation Flow](https://github.com/librelane/librelane)
 - GoCD NGSpice Agents for CICD VLSI Verification
@@ -136,8 +137,8 @@ and [cleanup audit](docs/cleanup-audit.md).
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/unic-cass/uniccass-icdesign-tools.git
-   cd uniccass-icdesign-tools
+   git clone https://github.com/ac3e-cl/ac3e-ic-toolbox.git
+   cd ac3e-ic-toolbox
    ```
 
 2. **Build (optional if using the published image) and run:**
@@ -164,8 +165,8 @@ and [cleanup audit](docs/cleanup-audit.md).
 
 3. **Clone the repository inside your WSL environment:**
    ```bash
-   git clone https://github.com/unic-cass/uniccass-icdesign-tools.git
-   cd uniccass-icdesign-tools
+   git clone https://github.com/ac3e-cl/ac3e-ic-toolbox.git
+   cd ac3e-ic-toolbox
    ```
 
 4. **Run from WSL2:**
@@ -203,8 +204,8 @@ and [cleanup audit](docs/cleanup-audit.md).
 
 2. **Clone the repository:**
    ```bash
-   git clone https://github.com/unic-cass/uniccass-icdesign-tools.git
-   cd uniccass-icdesign-tools
+   git clone https://github.com/ac3e-cl/ac3e-ic-toolbox.git
+   cd ac3e-ic-toolbox
    ```
 
 3. **Run the Docker environment:**
@@ -490,11 +491,20 @@ The release workflow builds and publishes an image whenever a branch named
 `release/x.y.z` is pushed. The branch version must exactly match
 `release.version` in `manifest.json`.
 
-Before using the workflow, configure these repository Actions secrets:
+Before using the workflow, configure these settings in the new GitHub repository:
 
 - `DOCKERHUB_USERNAME`: the Docker Hub account used to publish the image.
 - `DOCKERHUB_TOKEN`: a least-privilege Docker Hub access token with push access
-  to the repository declared under `image` in `manifest.json`.
+  to the repository declared under `image` in `manifest.json` (`isaiash/ac3e-ic-toolbox`).
+
+The workflow targets GitHub's `release-env` Actions environment. Create that
+environment under Settings → Environments, or change `environment: release-env`
+in `.github/workflows/docker-release.yml` to an existing environment. If the
+secrets are environment-scoped, add both there; otherwise repository-level
+Actions secrets work. Ensure Actions are enabled and the workflow has permission
+to read repository contents. The workflow builds from `release/x.y.z` branches;
+the version must match `release.version` in `manifest.json`. GitHub Actions does
+not need a repository URL variable—the checkout is the triggering repository.
 
 No GitHub Actions repository variables are required. In Docker Hub, set the
 repository tag mutability policy to **All tags are mutable**. A repeated
@@ -538,7 +548,7 @@ with at least 150 GB of free disk.
   Each tool directory contains specific documentation and usage instructions. For LibreLane-specific workflows, refer to the [LibreLane GitHub repository](https://github.com/librelane/librelane).
 
 - **Community & Support:**  
-  - For general issues: [GitHub Issues](https://github.com/unic-cass/uniccass-icdesign-tools/issues)
+  - For general issues: [GitHub Issues](https://github.com/ac3e-cl/ac3e-ic-toolbox/issues)
   - For LibreLane-specific questions: [FOSSi Chat Matrix Server](https://matrix.to/#/#openlane:fossi-foundation.org)
 
 - **License:**  

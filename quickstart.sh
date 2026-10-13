@@ -6,7 +6,7 @@ if (( $# > 1 )); then
     echo 'Usage: bash quickstart.sh [new-checkout-directory]' >&2
     exit 2
 fi
-destination=${1:-uniccass-icdesign-tools}
+destination=${1:-ac3e-ic-toolbox}
 if [[ -e $destination || -L $destination ]]; then
     echo "Destination already exists: $destination. Use make start inside it, or choose a new directory." >&2
     exit 2
@@ -17,7 +17,7 @@ done
 [[ -n ${DISPLAY:-} ]] || { echo 'make start requires an X server and DISPLAY. Run from your desktop terminal.' >&2; exit 2; }
 docker info >/dev/null || { echo 'Docker must be running and accessible to your user.' >&2; exit 2; }
 git clone --depth 1 --single-branch --branch main -- \
-    https://github.com/unic-cass/uniccass-icdesign-tools.git "$destination"
+    https://github.com/ac3e-cl/ac3e-ic-toolbox.git "$destination"
 cd -- "$destination"
 # Preserve a terminal for Docker even when invoked with curl ... | bash.
 if [[ ! -t 0 ]]; then

@@ -5,7 +5,7 @@ Thank you for your interest in contributing to the UNIC-CASS IC Design Tools pro
 ## How to Contribute
 
 ### 1. Reporting Issues
-- Use [GitHub Issues](https://github.com/unic-cass/uniccass-icdesign-tools/issues) to report bugs, request features, or ask questions.
+- Use [GitHub Issues](https://github.com/ac3e-cl/ac3e-ic-toolbox/issues) to report bugs, request features, or ask questions.
 - Please provide as much detail as possible, including steps to reproduce bugs, your operating system, and relevant logs or screenshots.
 
 ### 2. Suggesting Enhancements
@@ -42,7 +42,7 @@ Thank you for your interest in contributing to the UNIC-CASS IC Design Tools pro
 - Report unacceptable behavior to the maintainers.
 
 ## Community & Support
-- Join discussions in [GitHub Issues](https://github.com/unic-cass/uniccass-icdesign-tools/issues).
+- Join discussions in [GitHub Issues](https://github.com/ac3e-cl/ac3e-ic-toolbox/issues).
 - For more direct communication, see if there are any listed community channels in the README or project wiki.
 
 ## License

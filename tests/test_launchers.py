@@ -20,7 +20,7 @@ class Launchers(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         argv = json.loads(result.stdout)
         self.assertEqual(argv[-4:], ['--shell', 'printf', 'a b', '*'])
-        self.assertIn(f'isaiassh/unic-cass-tools:{VERSION}', argv)
+        self.assertIn(f'isaiassh/ac3e-ic-toolbox:{VERSION}', argv)
         self.assertIn(f'type=bind,source={ROOT}/shared,target=/home/designer/shared', argv)
         self.assertIn(f'type=bind,source={ROOT}/tests,target=/home/designer/tests', argv)
         self.assertFalse(any('DISPLAY' in a or 'privileged' in a or 'net=host' in a for a in argv))
@@ -76,7 +76,7 @@ class Launchers(unittest.TestCase):
         self.assertEqual(self.launch('x').returncode, 2)
         self.assertEqual(self.launch(DESIGNS='/a', SHARED_DIR='/b').returncode, 2)
         result = self.launch(DESIGNS='/a path', DOCKER_USER='', DOCKER_REGISTRY='')
-        self.assertIn(f'unic-cass-tools:{VERSION}', json.loads(result.stdout))
+        self.assertIn(f'ac3e-ic-toolbox:{VERSION}', json.loads(result.stdout))
         self.assertIn('type=bind,source=/a path,target=/home/designer/shared', json.loads(result.stdout))
 
     def test_literal_env_precedence_and_dry_run_no_writes(self):

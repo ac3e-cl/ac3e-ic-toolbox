@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
   group: docker-release-${{ github.ref }}
@@ -47,7 +48,7 @@ jobs:
           fi
 
           if [[ "$(jq -er '.image.registry' manifest.json)" != "docker.io" ]]; then
-            echo "The release workflow only publishes to docker.io." >&2
+            echo "The release workflow only publishes to Docker Hub (docker.io)." >&2
             exit 1
           fi
 

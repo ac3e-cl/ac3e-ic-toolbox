@@ -5,8 +5,8 @@
   },
   "image": {
     "registry": "docker.io",
-    "namespace": "isaiassh",
-    "name": "unic-cass-tools"
+    "namespace": "isaiash",
+    "name": "ac3e-ic-toolbox"
   },
   "build": {
     "target": "unic-cass-tools-nix",

@@ -6,7 +6,7 @@ import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = 'fbee49843948c4c7ca5ab126ef02d9be1335c580'
+BASELINE = '69cca4d'
 
 
 class RepositoryContract(unittest.TestCase):
@@ -18,7 +18,9 @@ class RepositoryContract(unittest.TestCase):
         before = json.loads(self.baseline('manifest.json'))
         after = json.loads((ROOT / 'manifest.json').read_text())
         self.assertEqual(before['build'], after['build'])
-        self.assertEqual(before['image'], after['image'])
+        self.assertEqual(before['image']['registry'], after['image']['registry'])
+        self.assertEqual(after['image']['namespace'], 'isaiash')
+        self.assertEqual(after['image']['name'], 'ac3e-ic-toolbox')
 
     def test_no_new_tool_stages_or_final_copies(self):
         before = self.baseline('Dockerfile')

@@ -60,7 +60,7 @@ class Quickstart(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(log.read_text().splitlines(), [
                 'docker info',
-                f'git clone --depth 1 --single-branch --branch main -- https://github.com/unic-cass/uniccass-icdesign-tools.git {destination}',
+                f'git clone --depth 1 --single-branch --branch main -- https://github.com/ac3e-cl/ac3e-ic-toolbox.git {destination}',
                 f'make start in {destination}',
             ])
             result = subprocess.run(['bash', str(ROOT / 'quickstart.sh'), str(destination)],
