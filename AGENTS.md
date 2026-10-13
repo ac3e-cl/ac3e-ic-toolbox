@@ -4,7 +4,7 @@
 
 UNIC-CASS IC Design Tools builds an Ubuntu 22.04 Docker image containing an open-source integrated-circuit design environment. The final image combines analog and digital EDA tools, the Sky130A, GF180MCU, and IHP SG13G2 PDKs, LibreLane, and GUI/VNC support. Most tools are compiled in independent Docker stages and copied into the final `unic-cass-tools-nix` stage.
 
-The root `Dockerfile` is the source of truth for upstream repository URLs and immutable revisions. Tool-specific installation logic lives under `images/<tool>/install.sh`. Runtime configuration is assembled from `images/final_structure/`, while `shared_xserver/` contains examples and files mounted into a running container.
+The root `manifest.json` is the source of truth for upstream repository URLs and immutable revisions, passed to `Dockerfile` by the build wrappers. Tool-specific installation logic lives under `images/<tool>/install.sh`. Runtime configuration is assembled from `images/final_structure/`. The initially empty `shared/` is the user workspace; `tests/` mounts separately into a running container.
 
 ## Prerequisites
 
@@ -58,21 +58,22 @@ Useful runtime targets include `make start`, `make start-vnc`, `make attach`, `m
 
 ## Test and validation commands
 
-Integration tests live under `shared_xserver/tests/` so they are available at `/home/designer/shared/tests` when that directory is mounted into a running container. They write ignored output under `shared_xserver/tests/run/`.
+Integration tests live under `tests/`, grouped by tool category, with required inputs under `tests/data/`. They mount at `/home/designer/tests` and write ignored output under `tests/run/`, never in the user workspace `shared/`.
 
-Run them inside the container:
+Run the suite from the host, or individual tests inside the container:
 
 ```bash
-/home/designer/shared/tests/layout-extraction.sh
-/home/designer/shared/tests/run-all.sh
+make test
+bash /home/designer/tests/pdk/layout-extraction.sh
+bash /home/designer/tests/run_all.sh
 ```
 
-`run-all.sh` executes every test and exits 0 if all pass, or 1 if any fail.
+`tests/run_all.sh` is the sole suite runner. It runs directly inside the EDA container without requiring `runtime/`, discovers every integration script, prints a final summary and exits 0 if all non-excluded tests pass, or 1 if any fail.
 
 Use these lightweight checks before starting a long image build:
 
 ```bash
-bash -n build/*.sh images/*/install.sh images/final_structure/{configure,install}/*.sh shared_xserver/tests/*.sh
+bash -n build/*.sh images/*/install.sh images/final_structure/{configure,install}/*.sh tests/*.sh tests/*/*.sh
 docker build --check .
 git diff --check
 ```
@@ -85,8 +86,8 @@ git diff --check
 - Respect `MAX_BUILD_JOBS`; do not replace bounded compilation with unconditional `nproc` in memory-intensive stages.
 - Write Bash with LF endings, a Bash shebang, strict failure behavior for new scripts, quoted expansions, and arrays for constructed commands. Check scripts with `bash -n`.
 - Keep Docker build contexts reproducible. Use BuildKit bind mounts for repository scripts and remove downloaded sources or temporary build products in the same stage that creates them.
-- Do not commit `.env`, logs, notebook checkpoints, simulation output, `shared_xserver/tests/run/`, `_build_logs`, or `.issues/drafts/`.
-- Treat `shared_xserver/verification/` as examples and exploratory verification unless a file is explicitly wired into `shared_xserver/tests/`.
+- Do not commit `.env`, logs, notebook checkpoints, simulation output, `tests/run/`, user designs under `shared/`, `_build_logs`, or `.issues/drafts/`.
+- Keep only required integration inputs under `tests/data/`; preserve user work externally before removing unused examples.
 - Update documentation when commands, image names, tags, supported PDKs, or runtime requirements change.
 
 ## Change expectations

@@ -1,0 +1,13 @@
+GF180MCU 3.3V NMOS operating point
+.include @PDKPATH@/libs.tech/ngspice/design.ngspice
+.lib @PDKPATH@/libs.tech/ngspice/sm141064.ngspice typical
+Vd drain 0 1.0
+Vg gate 0 1.5
+XM1 drain gate 0 0 nfet_03v3 L=0.28u W=1u nf=1 m=1
+.control
+op
+let smoke_id = -i(Vd)
+echo SMOKE_ID=$&smoke_id
+quit
+.endc
+.end

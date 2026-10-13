@@ -1,0 +1,7 @@
+Resistor divider DC sweep: V(out)=V(in)/2
+V1 in 0 0
+R1 in out 1000
+R2 out 0 1000
+.DC V1 0 2 1
+.PRINT DC FORMAT=CSV V(in) V(out)
+.END

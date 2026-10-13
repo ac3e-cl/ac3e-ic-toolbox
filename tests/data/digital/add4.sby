@@ -1,0 +1,14 @@
+[options]
+mode prove
+depth 2
+
+[engines]
+abc pdr
+
+[script]
+read -formal add4.v formal.sv
+prep -top formal_top
+
+[files]
+add4.v
+formal.sv

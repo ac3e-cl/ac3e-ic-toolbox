@@ -1,0 +1,12 @@
+.git
+.hermes
+.env
+_build_logs
+**/*.log
+**/__pycache__
+**/.ipynb_checkpoints
+tests/run
+shared
+IDEA.md
+
+.issues/drafts

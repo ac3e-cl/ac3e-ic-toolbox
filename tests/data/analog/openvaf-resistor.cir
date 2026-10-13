@@ -1,0 +1,11 @@
+Compiled Verilog-A resistor: 1V/1kohm = 1mA
+V1 in 0 1
+N1 in 0 rmodel
+.model rmodel smoke_resistor resistance=1000
+.control
+pre_osdi resistor.osdi
+op
+wrdata current.dat i(V1)
+quit
+.endc
+.end

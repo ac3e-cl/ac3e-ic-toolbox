@@ -57,10 +57,15 @@ dkms.conf
 **/_build_logs
 *.raw
 **/run
-shared_xserver/tests/run/
+tests/run/
+shared/
 
 # env file
 .env
 
 # Local drafts for tracked repository improvement plans
 .issues/drafts/
+
+# Local plans and Python test caches
+.hermes/
+**/__pycache__/

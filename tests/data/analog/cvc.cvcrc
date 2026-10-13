@@ -1,0 +1,7 @@
+CVC_TOP = inverter
+CVC_NETLIST = inverter.cdl
+CVC_MODEL_FILE = models
+CVC_POWER_FILE = power
+CVC_REPORT_FILE = inverter.rpt
+CVC_REPORT_TITLE = 'Minimal inverter electrical check'
+CVC_BACKUP_RESULTS = 'false'

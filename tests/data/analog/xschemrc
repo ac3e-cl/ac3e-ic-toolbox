@@ -1,0 +1,3 @@
+# Isolated built-in symbol library, independent of the active PDK.
+set XSCHEM_LIBRARY_PATH $env(XSCHEM_SMOKE_LIBRARY)
+set netlist_type spice
