@@ -28,3 +28,18 @@ Protected user entries `IDEA.md` and `shared_xserver/IPD413_202501/` are untouch
 these entries and generated/private data from the build context without
 excluding build scripts or supported test fixtures. `.hermes` plans are local
 and ignored by Git and Docker.
+
+## Separate user workspace and tests
+
+The default user directory is now the initially empty, gitignored `shared/`.
+The maintained integration scripts moved from `shared_xserver/tests/` into
+the root `tests/`, grouped by tool category. Required fixtures moved from
+`artifacts/` to `tests/data/`; generated results live in `tests/run/`.
+Runtime launchers and release CI mount the tests at `/home/designer/tests`
+separately from user designs.
+
+The unused course checkout, exploratory `verification/` tree and editor files
+were removed from the repository workspace after preserving an external local
+backup. None was a dependency of the maintained tests; the inverter GDS and
+other existing integration inputs are retained under `tests/data/`. `IDEA.md`
+and the user's release-version change in `manifest.json` remain untouched.
