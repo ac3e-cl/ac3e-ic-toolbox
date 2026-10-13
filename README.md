@@ -9,6 +9,32 @@
 
 ---
 
+## Quickstart: use the published image (no local build)
+
+From a Linux desktop terminal (or WSL 2 with an X server configured), install
+Docker, Git, GNU Make, Bash, `curl`, `jq`, and Python 3. Start Docker and ensure your user
+can access it; GUI applications require a working X server and `DISPLAY`.
+
+Download the bootstrap from `main`, optionally inspect it, then run it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/unic-cass/uniccass-icdesign-tools/main/quickstart.sh -o quickstart.sh
+bash quickstart.sh
+```
+
+The script clones the latest `main` into `./uniccass-icdesign-tools` and runs
+`make start`, using the published image version selected by that checkout.
+Docker downloads the image only when it is absent locally; the first download
+can be large. No toolchain compilation or local image build is needed.
+An existing destination is never overwritten. Choose another directory with
+`bash quickstart.sh "$HOME/eda-tools"`.
+
+For later sessions, run `cd uniccass-icdesign-tools && make start`.
+Designs persist in `shared/`; remove an existing stopped container explicitly
+with `make rm` before recreating it, or use `make attach` to resume it.
+For a terminal without an X server, clone the repository and use `make start-raw`.
+The bootstrap URL becomes available when this change is merged into `main`.
+
 The UNIC-CASS IC Design Tools repository provides a comprehensive, open-source suite of tools for Integrated Circuit (IC) design, simulation, and verification. This project is part of the Universalization of IC Design from CASS (UNIC-CASS) program—a structured, end-to-end IC design-to-test experiential learning initiative.
 
 This work is based on:
