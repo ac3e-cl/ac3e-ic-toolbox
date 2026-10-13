@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+TEST_ROOT="$(dirname "$SCRIPT_DIR")"
+source "$TEST_ROOT/common.sh"
 load_design_env
 sak-pdk gf180mcuD
 require_command ngspice
-RUN_DIR="$SCRIPT_DIR/run/ngspice-gf180-mosfet"
+RUN_DIR="$TEST_ROOT/run/ngspice-gf180-mosfet"
 mkdir -p "$RUN_DIR"
-python3 - "$SCRIPT_DIR/artifacts/gf180_nmos_op.spice.in" "$RUN_DIR/device.spice" <<'PY'
+python3 - "$TEST_ROOT/data/gf180_nmos_op.spice.in" "$RUN_DIR/device.spice" <<'PY'
 import os, pathlib, sys
 pathlib.Path(sys.argv[2]).write_text(pathlib.Path(sys.argv[1]).read_text().replace('@PDKPATH@', os.environ['PDKPATH']))
 PY

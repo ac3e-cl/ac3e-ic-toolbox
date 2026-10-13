@@ -1,0 +1,5 @@
+* Same network with renamed devices
+.subckt divider vin vout vss
+Rinput vin vout 1000
+Rload vout vss 2000
+.ends divider

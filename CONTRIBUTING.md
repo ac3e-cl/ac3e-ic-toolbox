@@ -28,7 +28,7 @@ Thank you for your interest in contributing to the UNIC-CASS IC Design Tools pro
 - Test your code before submitting.
 - Use test-first changes for runtime behavior: observe the expected failing test, implement minimally, then run `python3 -m unittest discover -s tests -p 'test_*.py' -v`.
 - Keep source revisions in `manifest.json`; compatibility work must not upgrade tools or import the full upstream tool inventory.
-- Run `CHECK_ONLY=1 ./build/build-image.sh`, a complete image build, and `/home/designer/shared/tests/run-all.sh` inside that exact image for release changes. Report which checks actually ran.
+- Run `CHECK_ONLY=1 ./build/build-image.sh`, a complete image build, and `bash /home/designer/tests/run_all.sh` inside that exact image for release changes. Tests mount at `/home/designer/tests`, separately from the initially empty user workspace `shared/`. Report which checks actually ran.
 - Use `set -o pipefail; ./build/build-stage.sh open_pdks 2>&1 | tee build-open-pdks.log` for stage diagnostics; never hide build failures while filtering logs.
 - Preserve user designs and notebooks. Remove files only with a recorded consumer/dependency audit.
 

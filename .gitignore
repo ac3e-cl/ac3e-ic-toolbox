@@ -57,7 +57,8 @@ dkms.conf
 **/_build_logs
 *.raw
 **/run
-shared_xserver/tests/run/
+tests/run/
+shared/
 
 # env file
 .env

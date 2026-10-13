@@ -1,0 +1,10 @@
+{
+  "tests": {
+    "analog/xyce-dc.sh": "Excluded by user: Xyce is not included in the current final image.",
+    "digital/test-orfs.sh": "Excluded by user: installed ORFS is incompatible with Yosys 0.44."
+  },
+  "manifest": {
+    "XYCE_NAME": "Excluded by user: Xyce is not included in the current final image.",
+    "YOSYS_MCY_NAME": "Excluded by user: MCY installation is disabled."
+  }
+}

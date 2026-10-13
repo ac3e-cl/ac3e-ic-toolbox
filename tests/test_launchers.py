@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = json.loads((ROOT / 'manifest.json').read_text())['release']['version']
 
 class Launchers(unittest.TestCase):
     def launch(self, mode='shell', *args, **env):
@@ -19,7 +20,9 @@ class Launchers(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         argv = json.loads(result.stdout)
         self.assertEqual(argv[-4:], ['--shell', 'printf', 'a b', '*'])
-        self.assertIn('isaiassh/unic-cass-tools:1.3.0', argv)
+        self.assertIn(f'isaiassh/unic-cass-tools:{VERSION}', argv)
+        self.assertIn(f'type=bind,source={ROOT}/shared,target=/home/designer/shared', argv)
+        self.assertIn(f'type=bind,source={ROOT}/tests,target=/home/designer/tests', argv)
         self.assertFalse(any('DISPLAY' in a or 'privileged' in a or 'net=host' in a for a in argv))
 
     def test_arbitrary_uid_gets_private_home_and_literal_bootstrap(self):
@@ -32,6 +35,18 @@ class Launchers(unittest.TestCase):
         self.assertIn('--entrypoint', argv)
         self.assertEqual(argv[-4:], ['--shell', 'printf', 'a b', '*'])
         self.assertNotIn('chown', ' '.join(argv))
+
+    def test_test_mode_has_separate_mounts_and_no_terminal(self):
+        result = subprocess.run(
+            ['bash', str(ROOT / 'runtime/start.sh'), 'test', '--print-json'],
+            env=dict(os.environ, DRY_RUN='1', ENV_FILE='/dev/null'),
+            text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        argv = json.loads(result.stdout)
+        self.assertIn('--rm', argv)
+        self.assertNotIn('-it', argv)
+        self.assertIn(f'type=bind,source={ROOT}/tests,target=/home/designer/tests', argv)
+        self.assertEqual(argv[-3:], ['--shell', 'bash', '/home/designer/tests/run_all.sh'])
 
     def test_desktop_and_library_settings_are_forwarded(self):
         result = self.launch('vnc', VNC_PW='fixture-only', VNC_RESOLUTION='1024x768', STD_CELL_LIBRARY='gf180mcu_fd_sc_mcu9t5v0')
@@ -61,7 +76,7 @@ class Launchers(unittest.TestCase):
         self.assertEqual(self.launch('x').returncode, 2)
         self.assertEqual(self.launch(DESIGNS='/a', SHARED_DIR='/b').returncode, 2)
         result = self.launch(DESIGNS='/a path', DOCKER_USER='', DOCKER_REGISTRY='')
-        self.assertIn('unic-cass-tools:1.3.0', json.loads(result.stdout))
+        self.assertIn(f'unic-cass-tools:{VERSION}', json.loads(result.stdout))
         self.assertIn('type=bind,source=/a path,target=/home/designer/shared', json.loads(result.stdout))
 
     def test_literal_env_precedence_and_dry_run_no_writes(self):
@@ -73,7 +88,7 @@ class Launchers(unittest.TestCase):
             config.write_text(f'DOCKER_USER=other\nDESIGNS="{designs}"\nDOCKER_IMAGE=$(touch {marker})\n')
             result = self.launch(ENV_FILE=str(config), DOCKER_USER='', DOCKER_IMAGE='local')
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn('local:1.3.0', json.loads(result.stdout))
+            self.assertIn(f'local:{VERSION}', json.loads(result.stdout))
             self.assertFalse(designs.exists())
             self.assertFalse(marker.exists())
 

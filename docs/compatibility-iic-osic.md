@@ -14,7 +14,8 @@ This is interface compatibility, not a clone of upstream's complete tool suite.
 | `start_vnc.sh` | XFCE/noVNC, requires image built with `ENABLE_GUI=1` |
 | `start_shell.sh` | Shell-only; host UID/GID by default rather than upstream's root default |
 | `start_jupyter.sh` | Jupyter Lab, normal authentication retained |
-| `DESIGNS` | Host project directory mounted at `/home/designer/shared` |
+| `DESIGNS` | Host project directory (default `shared/`) mounted at `/home/designer/shared` |
+| `tests/` | Separate test suite mount at `/home/designer/tests`; inputs under `tests/data/`, outputs under `tests/run/` |
 | `/foss/designs` | Link to the same project mount, not a second copy |
 | `/foss/tools`, `/foss/pdks`, `/headless` | Links to `/opt`, `/opt/pdks`, `/home/designer` |
 | `sak-pdk`, `set_pdk` | Two interfaces to one Bash selector, optional installed standard-cell library |
@@ -43,17 +44,15 @@ compatibility failure. Build logs and inventories must identify actual results.
 Host contracts: `python3 -m unittest discover -s tests -p 'test_*.py' -v`.
 Docker checks: `CHECK_ONLY=1 ./build/build-image.sh`.
 Full image build: `BUILD_IMAGE_TAG=unic-cass-compat:headless ./build/build-image.sh`.
-In-image suite: `/home/designer/shared/tests/run-all.sh`.
+Optional host integration launcher: `make test`.
+In-image suite: `bash /home/designer/tests/run_all.sh` (no `runtime/` dependency).
 The release workflow runs host tests and integration tests before authentication
 and publication, and uploads failed integration output before cleanup.
 
 See `cleanup-audit.md` for the exact removal scope. Build and integration results
 are recorded separately after real execution; this document is not a test-pass claim.
 
-## Maintainer instruction correction
+## Maintainer instructions
 
-The repository's `AGENTS.md` still describes pins in Dockerfile and tags 1.1.0.
-The active code reads pins and tag 1.3.0 from `manifest.json`. Updating AGENTS.md
-requires approval for protected instruction files; that edit was blocked by the
-client and was not retried through another tool. This document records the
-correct project behavior without changing that protected file.
+The active build wrappers read revisions and the release tag from `manifest.json`.
+`AGENTS.md` documents the separate `shared/` user workspace and `tests/` mount.

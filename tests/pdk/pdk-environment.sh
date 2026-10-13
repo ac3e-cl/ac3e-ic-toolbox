@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+TEST_ROOT="$(dirname "$SCRIPT_DIR")"
+source "$TEST_ROOT/common.sh"
 load_design_env
 require_command klayout
 for selected in ihp-sg13g2 sky130A gf180mcuD; do
@@ -27,6 +28,6 @@ assert files, 'no KLayout technology'
 for file in files:
     ET.parse(file)
 PY
-    klayout -b -r "$SCRIPT_DIR/artifacts/gf180_environment_tech.py"
+    klayout -b -r "$TEST_ROOT/data/gf180_environment_tech.py"
     pass "$selected environment and technology resources"
 done

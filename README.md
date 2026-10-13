@@ -65,7 +65,7 @@ All launchers share the same runtime configuration; Make targets remain aliases:
 
 Runtime scripts read optional `.env` settings without evaluating shell code;
 explicit environment overrides take precedence. `DESIGNS` names the host design
-directory; `SHARED_DIR` remains a legacy alias. Do not set them to different
+directory (default: the initially empty `shared/`); `SHARED_DIR` remains a legacy alias. Do not set them to different
 directories. Shells use the host UID/GID by default (`CONTAINER_USER` and
 `CONTAINER_GROUP` override them); `ROOT=1` explicitly requests root.
 Launchers provide a private, ephemeral tmpfs HOME owned by that UID/GID and
@@ -91,6 +91,9 @@ shell expansion; quoted strings within it are not interpreted as Bash code.
 
 Inside the container, `/foss/designs` and `/home/designer/shared` refer to the same
 mount; `/foss/pdks`, `/foss/tools` and `/headless` link to the existing local paths.
+Tests mount separately at `/home/designer/tests`; test fixtures and generated
+outputs never belong in the user workspace. `shared/` is gitignored and created
+automatically by the launchers when absent.
 A project may place a trusted Bash `.designinit` under `$DESIGNS`, for example:
 
 ```bash
@@ -251,17 +254,28 @@ manifest and pass its values to the otherwise static Dockerfile.
 
 ## Testing
 
-The scripts in `shared_xserver/tests/` run inside a container that mounts this directory at `/home/designer/shared`. Start the image first (`make start` or `make attach`), then:
+`tests/run_all.sh` is the only suite runner. It runs directly inside the EDA
+container without requiring the repository's `runtime/` directory or Docker
+commands. The tests mount separately from the user workspace:
 
 ```bash
-/home/designer/shared/tests/layout-extraction.sh     # Magic parasitic extraction of the IHP inverter GDS
-/home/designer/shared/tests/klayout-ihp-drc.sh       # KLayout DRC smoke test of the IHP inverter GDS
-/home/designer/shared/tests/ngspice-ihp-mosfet.sh    # ngspice operating-point smoke test of an IHP MOSFET
-/home/designer/shared/tests/librelane-smoke.sh       # librelane --manual-pdk --smoke-test
-/home/designer/shared/tests/run-all.sh               # run every test; exit 0 on success, 1 on failure
+# Inside a container with tests/ mounted:
+bash /home/designer/tests/run_all.sh
+# Optional host convenience command (starts a temporary container):
+make test
+# An explicit local image, without changing manifest.json:
+DOCKER_USER= DOCKER_IMAGE=unic-cass-compat DOCKER_TAG=gui make test
 ```
 
-Generated files are written to `shared_xserver/tests/run/` and are gitignored. `run-all.sh` is the entry point for pipelines.
+Tests are organized under `tests/analog/`, `digital/`, `gui/`, `inventory/` and
+`pdk/`. Only required inputs are stored in `tests/data/`. The runner discovers
+every shell test in these folders, continues after failures, and prints a final
+per-test summary. It exits 0 when every non-excluded test passes; missing tools
+are failures unless explicitly excluded in `tests/exclusions.json`. Xyce, MCY
+inventory checks and ORFS are excluded by user decision and remain visible in
+the summary, never counted as passes. `TEST_TIMEOUT` controls the per-test limit (900 seconds by
+default). Generated files, individual logs and `summary.tsv` are written under
+the gitignored `tests/run/`.
 
 The suite also verifies the three PDK environments, a GF180MCU MOSFET operating
 point, GF KLayout technology/PCells and an explicit GF LibreLane counter flow
@@ -303,7 +317,7 @@ To publish a release:
    ```
 
 The workflow validates the manifest and Dockerfile, builds the image through
-`build/build-image.sh`, runs `shared_xserver/tests/run-all.sh` inside that exact
+`build/build-image.sh`, runs `tests/run_all.sh` inside that exact
 image, and logs in and pushes to Docker Hub only after every test passes. It can
 also be rerun manually from the matching release branch.
 

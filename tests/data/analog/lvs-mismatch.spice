@@ -1,0 +1,5 @@
+* Intentional topology mismatch: both resistors connect to vin
+.subckt divider vin vout vss
+R1 vin vout 1000
+R2 vin vss 2000
+.ends divider

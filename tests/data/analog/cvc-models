@@ -1,0 +1,2 @@
+MN smoke_nmos Vth=0.2 Vgs=1.8 Vds=1.8
+MP smoke_pmos Vth=-0.2 Vgs=1.8 Vds=1.8

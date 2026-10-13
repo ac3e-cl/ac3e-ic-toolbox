@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 # Magic parasitic extraction of the IHP inverter GDS fixture.
 # Run inside the container:
-#   /home/designer/shared/tests/layout-extraction.sh
+#   /home/designer/tests/pdk/layout-extraction.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST_ROOT="$(dirname "$SCRIPT_DIR")"
 # shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
+source "${TEST_ROOT}/common.sh"
 
 load_design_env
 require_command magic
 
-GDS="${SCRIPT_DIR}/artifacts/test_inv.gds"
+GDS="${TEST_ROOT}/data/test_inv.gds"
 CELL="test_inv"
 OUTPUT_FILE="test_inv.spice"
-RUN_DIR="${SCRIPT_DIR}/run/layout-extraction"
+RUN_DIR="${TEST_ROOT}/run/layout-extraction"
 MAGIC_RCFILE="${PDK_ROOT}/ihp-sg13g2/libs.tech/magic/ihp-sg13g2.magicrc"
 CMD_FILE="${RUN_DIR}/extract.tcl"
 OUTPUT_FILE_PATH="${RUN_DIR}/${OUTPUT_FILE}"

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+TEST_ROOT="$(dirname "$SCRIPT_DIR")"
+source "$TEST_ROOT/common.sh"
 load_design_env
 sak-pdk gf180mcuD gf180mcu_fd_sc_mcu7t5v0
 require_command librelane
-RUN_DIR="$SCRIPT_DIR/run/librelane-gf180-smoke"
+RUN_DIR="$TEST_ROOT/run/librelane-gf180-smoke"
 mkdir -p "$RUN_DIR"
-cp "$SCRIPT_DIR/artifacts/gf180-counter/"{counter.v,config.json} "$RUN_DIR/"
+cp "$TEST_ROOT/data/gf180-counter/"{counter.v,config.json} "$RUN_DIR/"
 cd "$RUN_DIR"
 # Explicit CLI flags: LibreLane's default PDK is sky130A, not environment PDK.
 librelane --manual-pdk --pdk-root "$PDK_ROOT" --pdk gf180mcuD --scl gf180mcu_fd_sc_mcu7t5v0 --run-tag gf180-smoke --overwrite config.json >stdout.log 2>stderr.log

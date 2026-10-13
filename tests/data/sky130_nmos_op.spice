@@ -1,0 +1,12 @@
+Sky130 1.8V NMOS operating point
+.lib /opt/pdks/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+Vd drain 0 1.0
+Vg gate 0 1.2
+XM1 drain gate 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1.0 nf=1
+.control
+op
+let smoke_id = -i(Vd)
+echo SMOKE_ID=$&smoke_id
+quit
+.endc
+.end

@@ -1,4 +1,4 @@
-.PHONY: all print build xserver start start-vnc attach start-raw start-notebook start-devcontainer push pull rm
+.PHONY: all print build test xserver start start-vnc attach start-raw start-notebook start-devcontainer push pull rm
 # Export supplied Make variables without including executable Make syntax from .env.
 export
 all: print
@@ -6,6 +6,8 @@ print:
 	@./runtime/start.sh print
 build:
 	./runtime/start.sh build
+test:
+	./runtime/start.sh test
 xserver:
 	@printf '%s\n' 'Use your existing X server and DISPLAY; no global X access is changed.'
 start:

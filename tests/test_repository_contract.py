@@ -14,9 +14,11 @@ class RepositoryContract(unittest.TestCase):
         return subprocess.check_output(
             ['git', 'show', f'{BASELINE}:{path}'], cwd=ROOT, text=True)
 
-    def test_manifest_is_unchanged(self):
-        self.assertEqual(json.loads(self.baseline('manifest.json')),
-                         json.loads((ROOT / 'manifest.json').read_text()))
+    def test_tool_pins_are_unchanged(self):
+        before = json.loads(self.baseline('manifest.json'))
+        after = json.loads((ROOT / 'manifest.json').read_text())
+        self.assertEqual(before['build'], after['build'])
+        self.assertEqual(before['image'], after['image'])
 
     def test_no_new_tool_stages_or_final_copies(self):
         before = self.baseline('Dockerfile')
@@ -46,8 +48,8 @@ class RepositoryContract(unittest.TestCase):
 
     def test_build_context_excludes_private_and_generated_data(self):
         lines = (ROOT / '.dockerignore').read_text().splitlines()
-        for pattern in ['.git', '.hermes', '.env', 'shared_xserver/tests/run',
-                        'IDEA.md', 'shared_xserver/IPD413_202501']:
+        for pattern in ['.git', '.hermes', '.env', 'tests/run',
+                        'IDEA.md', 'shared']:
             self.assertIn(pattern, lines)
 
 

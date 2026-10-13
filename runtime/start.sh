@@ -30,7 +30,7 @@ reference=$image:$tag
 if [[ -n ${DESIGNS:-} && -n ${SHARED_DIR:-} && $DESIGNS != "$SHARED_DIR" ]]; then
     echo 'DESIGNS and SHARED_DIR conflict' >&2; exit 2
 fi
-designs=${DESIGNS:-${SHARED_DIR:-$root/shared_xserver}}
+designs=${DESIGNS:-${SHARED_DIR:-$root/shared}}
 [[ $designs == /* ]] || designs=$PWD/$designs
 [[ $designs != *,* ]] || { echo 'Docker bind paths cannot contain commas' >&2; exit 2; }
 uid=${CONTAINER_USER:-${USER_ID:-$(id -u)}}
@@ -41,8 +41,8 @@ identity_mode=$mode
 case $mode in attach|rm|print) identity_mode=x;; esac
 name=${CONTAINER_NAME:-unic-cass-tools_${identity_mode}_uid_${uid}}
 
-argv=(docker run --name "$name" --user "$uid:$gid" --mount "type=bind,source=$designs,target=/home/designer/shared" --env SHELL=/bin/bash --env "PDK=${PDK:-ihp-sg13g2}")
-for setting in STD_CELL_LIBRARY VNC_PW VNC_RESOLUTION; do
+argv=(docker run --name "$name" --user "$uid:$gid" --mount "type=bind,source=$designs,target=/home/designer/shared" --mount "type=bind,source=$root/tests,target=/home/designer/tests" --env SHELL=/bin/bash --env "PDK=${PDK:-ihp-sg13g2}")
+for setting in STD_CELL_LIBRARY VNC_PW VNC_RESOLUTION TEST_TIMEOUT; do
     [[ ! -v $setting ]] || argv+=(--env "$setting=${!setting}")
 done
 port() {
@@ -53,6 +53,7 @@ port() {
 case $mode in
     shell|x|attach) argv+=(-it);;
     vnc|jupyter) argv+=(-d);;
+    test) argv+=(--rm);;
     build|print|pull|push|rm|devcontainer) ;;
     *) echo 'Unknown launcher mode' >&2; exit 2;;
 esac
@@ -79,6 +80,7 @@ case $mode in
     shell|x|attach) argv+=(--shell); if (( $# )); then argv+=("$@"); else argv+=(/bin/bash); fi;;
     vnc) argv+=(--vnc --wait "$@");;
     jupyter) argv+=(--shell jupyter lab --no-browser --ip=0.0.0.0 --notebook-dir=/foss/designs "$@");;
+    test) argv+=(--shell bash /home/designer/tests/run_all.sh "$@");;
     build) if [[ -n ${STAGE:-} ]]; then argv=("$root/build/build-stage.sh" "$STAGE"); else argv=("$root/build/build-image.sh"); fi;;
     print) ;;
     pull) argv=(docker image pull "$reference");;
@@ -123,4 +125,10 @@ if [[ -z ${NO_PULL:-} ]] && ! docker image inspect "$reference" >/dev/null 2>&1;
     docker image pull "$reference"
 fi
 mkdir -p -- "$designs"
+if [[ $mode == test ]]; then
+    mkdir -p -- "$root/tests/run"
+    docker image inspect --format '{{.Id}}' "$reference" > "$root/tests/run/image-id.txt"
+    printf '%s\n' "$reference" > "$root/tests/run/image-reference.txt"
+    printf 'Testing image %s (%s)\n' "$reference" "$(< "$root/tests/run/image-id.txt")"
+fi
 exec "${argv[@]}"

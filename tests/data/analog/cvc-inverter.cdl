@@ -1,0 +1,5 @@
+* Minimal inverter for voltage-aware electrical checking
+.SUBCKT inverter VDD VSS A Y
+MP1 Y A VDD VDD smoke_pmos L=1u W=2u
+MN1 Y A VSS VSS smoke_nmos L=1u W=1u
+.ENDS inverter

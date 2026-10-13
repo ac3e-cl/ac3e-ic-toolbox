@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 # KLayout DRC smoke test using the IHP SG13G2 upstream DRC runner.
 # Run inside the container:
-#   /home/designer/shared/tests/klayout-ihp-drc.sh
+#   /home/designer/tests/pdk/klayout-ihp-drc.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST_ROOT="$(dirname "$SCRIPT_DIR")"
 # shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
+source "${TEST_ROOT}/common.sh"
 
 load_design_env
 require_command klayout
 require_command python3
 
-GDS="${SCRIPT_DIR}/artifacts/test_inv.gds"
+GDS="${TEST_ROOT}/data/test_inv.gds"
 TOPCELL="test_inv"
-RUN_DIR="${SCRIPT_DIR}/run/klayout-ihp-drc"
+RUN_DIR="${TEST_ROOT}/run/klayout-ihp-drc"
 VERSIONS_FILE="${PDK_ROOT}/versions.txt"
 DRC_RUNNER="${PDK_ROOT}/ihp-sg13g2/libs.tech/klayout/tech/drc/run_drc.py"
 REPORT="${RUN_DIR}/test_inv_${TOPCELL}_activ.lyrdb"

@@ -1,0 +1,5 @@
+* Minimal two-resistor network
+.subckt divider vin vout vss
+R1 vin vout 1000
+R2 vout vss 2000
+.ends divider

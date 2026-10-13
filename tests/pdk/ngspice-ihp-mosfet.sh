@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # Smoke test ngspice with an IHP SG13G2 LV MOSFET operating point.
 # Run inside the container:
-#   /home/designer/shared/tests/ngspice-ihp-mosfet.sh
+#   /home/designer/tests/pdk/ngspice-ihp-mosfet.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST_ROOT="$(dirname "$SCRIPT_DIR")"
 # shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
+source "${TEST_ROOT}/common.sh"
 
 load_design_env
 require_command ngspice
 
-NETLIST="${SCRIPT_DIR}/artifacts/ihp_nmos_op.spice"
-RUN_DIR="${SCRIPT_DIR}/run/ngspice-ihp-mosfet"
+NETLIST="${TEST_ROOT}/data/ihp_nmos_op.spice"
+RUN_DIR="${TEST_ROOT}/run/ngspice-ihp-mosfet"
 LOG_FILE="${RUN_DIR}/ngspice.log"
 OSDI="${PDK_ROOT}/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi"
 

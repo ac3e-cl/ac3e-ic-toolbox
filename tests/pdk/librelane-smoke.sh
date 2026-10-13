@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # LibreLane smoke test using the image PDKs (no Ciel download).
 # Run inside the container:
-#   /home/designer/shared/tests/librelane-smoke.sh
+#   /home/designer/tests/pdk/librelane-smoke.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST_ROOT="$(dirname "$SCRIPT_DIR")"
 # shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
+source "${TEST_ROOT}/common.sh"
 
 load_design_env
 require_command librelane
 
-RUN_DIR="${SCRIPT_DIR}/run/librelane-smoke"
+RUN_DIR="${TEST_ROOT}/run/librelane-smoke"
 LOG_FILE="${RUN_DIR}/librelane.log"
 
 rm -rf "${RUN_DIR}"
