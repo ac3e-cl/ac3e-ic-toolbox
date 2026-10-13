@@ -92,6 +92,9 @@ UTILITY_DEPS=(
 	less
 	htop
 	gtkwave
+	# Private headless displays for GUI integration tests, even without VNC.
+	xvfb
+	x11-utils
 )
 
 XSCHEM_DEPS=(

@@ -6,6 +6,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CIContract(unittest.TestCase):
+    def test_headless_release_has_gui_test_dependencies(self):
+        text = (ROOT / 'images/base/base_install.sh').read_text()
+        runtime_dependencies = text.split('GUI_DEPS=(')[0]
+        for package in ('xvfb', 'x11-utils'):
+            self.assertIn(package, runtime_dependencies)
+
+    def test_shell_checks_validate_every_script(self):
+        text = (ROOT / '.github/workflows/docker-release.yml').read_text()
+        self.assertIn('for script in', text)
+        self.assertIn('quickstart.sh', text)
+        self.assertIn('images/base/*.sh', text)
+        self.assertIn('bash -n "$script"', text)
+
+    def test_checkout_includes_contract_baseline_history(self):
+        text = (ROOT / '.github/workflows/docker-release.yml').read_text()
+        self.assertIn('fetch-depth: 0', text)
+
     def test_publication_remains_gated(self):
         text = (ROOT / '.github/workflows/docker-release.yml').read_text()
         checks = text.index('python3 -m unittest discover')

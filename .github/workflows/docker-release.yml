@@ -23,6 +23,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
+        with:
+          # Repository contracts compare tool pins against a historical commit.
+          fetch-depth: 0
 
       - name: Validate release metadata
         env:
@@ -79,15 +82,18 @@ jobs:
           set -Eeuo pipefail
           jq -e . manifest.json >/dev/null
           python3 -m unittest discover -s tests -p 'test_*.py' -v
-          bash -n \
-            start_*.sh runtime/*.sh \
+          for script in \
+            quickstart.sh start_*.sh runtime/*.sh \
             build/*.sh \
+            images/base/*.sh \
             images/*/install.sh \
             images/pdks/*.sh \
             images/final_structure/configure/.bashrc \
             images/final_structure/configure/*.sh \
             images/final_structure/install/*.sh \
-            shared_xserver/tests/*.sh
+            tests/*.sh tests/*/*.sh; do
+            bash -n "$script"
+          done
           CHECK_ONLY=1 ./build/build-image.sh
 
       - name: Build release image
@@ -102,22 +108,22 @@ jobs:
           IMAGE: ${{ env.RELEASE_IMAGE }}
         run: |
           set -Eeuo pipefail
-          test_output="${GITHUB_WORKSPACE}/shared_xserver/tests/run"
+          test_output="${GITHUB_WORKSPACE}/tests/run"
           mkdir -p "${test_output}"
           chmod 0777 "${test_output}"
           docker run --rm \
-            --mount "type=bind,source=${GITHUB_WORKSPACE}/shared_xserver,target=/home/designer/shared" \
+            --mount "type=bind,source=${GITHUB_WORKSPACE}/tests,target=/home/designer/tests" \
             --env PDK=ihp-sg13g2 \
             --entrypoint /bin/bash \
             "${IMAGE}" \
-            -lc '/home/designer/shared/tests/run-all.sh'
+            -lc 'bash /home/designer/tests/run_all.sh'
 
       - name: Preserve failed integration output
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
           name: integration-failure-output
-          path: shared_xserver/tests/run/
+          path: tests/run/
           if-no-files-found: ignore
 
       - name: Log in to Docker Hub
@@ -137,4 +143,4 @@ jobs:
 
       - name: Clean integration output
         if: ${{ always() }}
-        run: sudo rm -rf "${GITHUB_WORKSPACE}/shared_xserver/tests/run"
+        run: sudo rm -rf "${GITHUB_WORKSPACE}/tests/run"
