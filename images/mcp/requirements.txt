@@ -1,0 +1,2 @@
+# MCP SDK 1.x uses the initialize handshake supported by stdio CLI clients.
+mcp==1.30.0

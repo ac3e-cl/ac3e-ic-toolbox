@@ -503,6 +503,10 @@ RUN mkdir -p /foss && \
     chown designer:designer /home/designer/shared /home/designer/.klayout /home/designer/.bashrc
 ENV DESIGNS=/foss/designs
 
+# Bundled stdio MCP, isolated from the EDA Python environment.
+RUN --mount=type=bind,source=images/mcp,target=/images/mcp \
+    bash /images/mcp/install.sh
+
 # Patch IHP PDK for KLayout DRC compatibility
 RUN --mount=type=bind,source=images/final_structure/configure,target=/images/final_structure/configure \
     cd /images/final_structure/configure/ \
