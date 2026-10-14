@@ -7,7 +7,7 @@ are required:
 for tool in yosys eqy sby iverilog verilator openroad orfs; do
   docker run --rm \
     --mount "type=bind,src=$PWD/tests,dst=/home/designer/tests" \
-    isaiassh/unic-cass-tools:2.0.0 \
+    isaiash/ac3e-ic-toolbox:0.1.0 \
     bash "/home/designer/tests/digital/test-$tool.sh"
 done
 ```
@@ -28,7 +28,8 @@ writes evidence beneath `tests/run/digital-<tool>/`. Fixtures live in
 
 ## Verified image results and gaps
 
-Image `isaiassh/unic-cass-tools:2.0.0`, ID
+Historical baseline image (release 2.0.0, not a validation of the current
+`isaiash/ac3e-ic-toolbox:0.1.0` image), ID
 `sha256:f1e8657a540f2a9978c2ca4eb0ebf30bcd0d8e8b861906a97beba0cb408b2368`:
 
 - Yosys, EQY, SBY, Icarus, Verilator, and OpenROAD tests pass.

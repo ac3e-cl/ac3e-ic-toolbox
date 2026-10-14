@@ -1,16 +1,16 @@
 # shellcheck shell=bash
 # Shared environment: no cwd changes, compilation, or exported shell guards.
-_unic_path_add() {
+_ac3e_path_add() {
     local name="$1" value="$2" current="${!1-}"
     case ":$current:" in *":$value:"*) return 0 ;; esac
     printf -v "$name" '%s' "${current:+$current:}$value"
     export "$name"
 }
-_unic_setup() {
+_ac3e_setup() {
     local config tool directory status nix_active=false
     config="${BASH_SOURCE[0]%/*}"
     export TOOLS="${TOOLS:-/opt}" PDK_ROOT="${PDK_ROOT:-/opt/pdks}" DESIGNS="${DESIGNS:-/foss/designs}"
-    export BASH_ENV="$config/unic-cass-env.sh"
+    export BASH_ENV="$config/ac3e-ic-toolbox-env.sh"
     if [[ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]]; then
         source "$HOME/.nix-profile/etc/profile.d/nix.sh" || return $?
         nix_active=true
@@ -27,14 +27,14 @@ _unic_setup() {
     fi
     for tool in cvc_rv gaw3-xschem iverilog magic netgen ngspice openvaf verilator xschem yosys openroad; do
         for directory in "$TOOLS/$tool"/*/bin; do
-            [[ ! -d "$directory" ]] || _unic_path_add PATH "$directory"
+            [[ ! -d "$directory" ]] || _ac3e_path_add PATH "$directory"
         done
     done
-    [[ ! -d "$TOOLS/yosys/bin" ]] || _unic_path_add PATH "$TOOLS/yosys/bin"
+    [[ ! -d "$TOOLS/yosys/bin" ]] || _ac3e_path_add PATH "$TOOLS/yosys/bin"
     if [[ "$nix_active" == false ]]; then
-        _unic_path_add PATH "$TOOLS/common/bin"
-        _unic_path_add LD_LIBRARY_PATH "$TOOLS/common/lib64"
-        _unic_path_add LD_LIBRARY_PATH "$TOOLS/common/lib"
+        _ac3e_path_add PATH "$TOOLS/common/bin"
+        _ac3e_path_add LD_LIBRARY_PATH "$TOOLS/common/lib64"
+        _ac3e_path_add LD_LIBRARY_PATH "$TOOLS/common/lib"
         local dependency
         for dependency in SWIG Eigen3 GTest LEMON spdlog ortools; do
             case " ${CMAKE_PACKAGE_ROOT_ARGS:-} " in
@@ -46,8 +46,8 @@ _unic_setup() {
     export ORFS_DIR="$TOOLS/OpenROAD-flow-scripts" YOSYS_CMD=yosys OPENSTA_EXE=sta
     export OPENROAD_EXE="$(command -v openroad || :)" YOSYS_EXE="$(command -v yosys || :)"
     source "$config/pdk.sh" || return $?
-    if [[ "${_UNIC_DESIGNINIT_DONE:-}" != "$BASHPID" ]]; then
-        _UNIC_DESIGNINIT_DONE="$BASHPID"
+    if [[ "${_AC3E_DESIGNINIT_DONE:-}" != "$BASHPID" ]]; then
+        _AC3E_DESIGNINIT_DONE="$BASHPID"
         if [[ -f "$DESIGNS/.designinit" ]]; then
             source "$DESIGNS/.designinit" || { status=$?; return "$status"; }
         fi
@@ -58,4 +58,4 @@ _unic_setup() {
         set_pdk "${PDK:-ihp-sg13g2}"
     fi
 }
-_unic_setup
+_ac3e_setup

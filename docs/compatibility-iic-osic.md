@@ -43,7 +43,8 @@ compatibility failure. Build logs and inventories must identify actual results.
 
 Host contracts: `python3 -m unittest discover -s tests -p 'test_*.py' -v`.
 Docker checks: `CHECK_ONLY=1 ./build/build-image.sh`.
-Full image build: `BUILD_IMAGE_TAG=unic-cass-compat:headless ./build/build-image.sh`.
+Full image build: `./build/build-image.sh` (standard `ac3e-ic-toolbox` target, including Nix/LibreLane; default image `isaiash/ac3e-ic-toolbox:0.1.0`).
+The `ac3e-ic-toolbox-base` target is an intermediate assembly stage, not the standard image.
 Optional host integration launcher: `make test`.
 In-image suite: `bash /home/designer/tests/run_all.sh` (no `runtime/` dependency).
 The release workflow runs host tests and integration tests before authentication

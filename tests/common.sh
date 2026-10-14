@@ -13,7 +13,7 @@ fail() {
 load_design_env() {
 	export HOME="${HOME:-/home/designer}"
 	# shellcheck disable=SC1091
-	source /opt/unic-cass/config/unic-cass-env.sh
+	source /opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh
 }
 
 require_command() {

@@ -23,7 +23,7 @@ class UIDRuntime(unittest.TestCase):
                 env.update(CONTAINER_USER=uid, CONTAINER_GROUP=gid)
                 command = ['bash', str(ROOT / 'start_shell.sh'), '--print-json',
                            'bash', '--noprofile', '--norc', '-c',
-                           'set -eu; test "$HOME" = /tmp/unic-cass-home; '
+                           'set -eu; test "$HOME" = /tmp/ac3e-ic-toolbox-home; '
                            'test "$(stat -c %u:%g "$HOME")" = "$(id -u):$(id -g)"; '
                            'test "$(stat -c %a "$HOME")" = 700; '
                            'touch "$HOME/write-probe"; '

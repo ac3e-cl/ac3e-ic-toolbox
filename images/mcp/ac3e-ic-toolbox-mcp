@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Never source EDA shell configuration into the protocol's stdout stream.
 set -Eeuo pipefail
-prefix=${UNIC_CASS_MCP_HOME:-/opt/unic-cass/mcp}
+prefix=${AC3E_IC_TOOLBOX_MCP_HOME:-/opt/ac3e-ic-toolbox/mcp}
 unset BASH_ENV PYTHONPATH PYTHONHOME
 exec "$prefix/venv/bin/python" -I "$prefix/server.py" "$@"

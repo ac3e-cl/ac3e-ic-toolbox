@@ -1,6 +1,6 @@
-# Contributing to UNIC-CASS IC Design Tools
+# Contributing to AC3E IC Toolbox
 
-Thank you for your interest in contributing to the UNIC-CASS IC Design Tools project! We welcome contributions from everyone, especially those in the global IC design community. Your help is essential to make IC design accessible and universal.
+Thank you for your interest in contributing to the AC3E IC Toolbox project! We welcome contributions from everyone, especially those in the global IC design community. Your help is essential to make IC design accessible and universal.
 
 ## How to Contribute
 
@@ -28,6 +28,8 @@ Thank you for your interest in contributing to the UNIC-CASS IC Design Tools pro
 - Test your code before submitting.
 - Use test-first changes for runtime behavior: observe the expected failing test, implement minimally, then run `python3 -m unittest discover -s tests -p 'test_*.py' -v`.
 - Keep source revisions in `manifest.json`; compatibility work must not upgrade tools or import the full upstream tool inventory.
+- Use `make build` or `./build/build-image.sh` for the standard `ac3e-ic-toolbox` target, including Nix/LibreLane. `ac3e-ic-toolbox-base` is an intermediate stage, not the standard runtime image. The manifest defaults to `isaiash/ac3e-ic-toolbox:0.1.0`.
+- Optional `.env` settings are literal `KEY=value`, read by Make/runtime launchers without shell evaluation; environment overrides take precedence. Do not source `.env` or put shell expressions in it. Direct build scripts accept environment assignments and do not load `.env`.
 - Run `CHECK_ONLY=1 ./build/build-image.sh`, a complete image build, and `bash /home/designer/tests/run_all.sh` inside that exact image for release changes. Tests mount at `/home/designer/tests`, separately from the initially empty user workspace `shared/`. Report which checks actually ran.
 - Use `set -o pipefail; ./build/build-stage.sh open_pdks 2>&1 | tee build-open-pdks.log` for stage diagnostics; never hide build failures while filtering logs.
 - Preserve user designs and notebooks. Remove files only with a recorded consumer/dependency audit.

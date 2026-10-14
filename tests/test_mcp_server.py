@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location('unic_mcp', ROOT / 'images/mcp/server.py')
+    spec = importlib.util.spec_from_file_location('ac3e_ic_toolbox_mcp', ROOT / 'images/mcp/server.py')
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -130,7 +130,7 @@ class ServerTests(unittest.TestCase):
 
     def test_output_root_symlink_is_rejected(self):
         self.backend.close()
-        (self.workspace / '.unic-cass-mcp').symlink_to(self.root)
+        (self.workspace / '.ac3e-ic-toolbox-mcp').symlink_to(self.root)
         self.assertRaises(ValueError, self.module.Backend, self.workspace, self.config, self.pdks)
 
     def test_script_runners_and_flow_use_fixed_argv(self):
@@ -194,11 +194,11 @@ class ServerTests(unittest.TestCase):
                 events.append(transport)
         with patch.object(self.module, 'Backend', FakeBackend), patch.object(self.module, 'create_server', return_value=FakeServer()):
             self.module.main([])
-        self.assertEqual(events, [('/foss/designs', '/opt/unic-cass/config/unic-cass-env.sh', '/opt/pdks'), 'stdio', 'closed'])
+        self.assertEqual(events, [('/foss/designs', '/opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh', '/opt/pdks'), 'stdio', 'closed'])
 
     def test_workspace_rejects_traversal_and_symlink_escape(self):
         (self.workspace / 'escape').symlink_to(self.root)
-        for path in ('../env.sh', '/etc/passwd', 'escape/env.sh', '.unic-cass-mcp/x'):
+        for path in ('../env.sh', '/etc/passwd', 'escape/env.sh', '.ac3e-ic-toolbox-mcp/x'):
             with self.subTest(path=path):
                 self.assertRaises(ValueError, self.backend.input_path, path)
 

@@ -1,7 +1,7 @@
-"""UNIC-CASS stdio MCP (mcp==1.30.0, Python >=3.10).
+"""ac3e-ic-toolbox stdio MCP (mcp==1.30.0, Python >=3.10).
 
 Jobs belong to this server session: EOF/shutdown cancels process groups. Output
-files persist under workspace/.unic-cass-mcp/<uuid>, not resumable job state.
+files persist under workspace/.ac3e-ic-toolbox-mcp/<uuid>, not resumable job state.
 Scripts/netlists/config and the runtime environment are trusted executable input,
 not sandboxed: they can access the container. Path checks constrain API paths,
 not EDA scripts' behavior. Never expose this service to untrusted clients.
@@ -25,13 +25,13 @@ TOOLS = ('ngspice', 'Xyce', 'yosys', 'openroad', 'klayout', 'magic', 'librelane'
 
 
 class Backend:
-    def __init__(self, workspace='/foss/designs', config='/opt/unic-cass/config/unic-cass-env.sh', pdk_root='/opt/pdks'):
+    def __init__(self, workspace='/foss/designs', config='/opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh', pdk_root='/opt/pdks'):
         self.workspace = Path(workspace).resolve(strict=True)
         self.config = Path(config).resolve(strict=True)
         self.pdk_root = Path(pdk_root).resolve(strict=True)
         if not self.workspace.is_dir() or not self.pdk_root.is_dir() or not self.config.is_file():
             raise ValueError('workspace/PDK root must be directories and config a file')
-        self.output_root = self.workspace / '.unic-cass-mcp'
+        self.output_root = self.workspace / '.ac3e-ic-toolbox-mcp'
         self._check_output_root()
         self.jobs = {}
         self.lock = threading.RLock()
@@ -49,7 +49,7 @@ class Backend:
         if '..' in candidate.parts:
             raise ValueError('path traversal is forbidden')
         resolved = (self.workspace / candidate).resolve()
-        if not resolved.is_relative_to(self.workspace) or resolved.is_relative_to(self.workspace / '.unic-cass-mcp'):
+        if not resolved.is_relative_to(self.workspace) or resolved.is_relative_to(self.workspace / '.ac3e-ic-toolbox-mcp'):
             raise ValueError('input must be inside workspace, outside job outputs')
         if not resolved.is_file():
             raise ValueError('input must be a file')
@@ -79,7 +79,7 @@ class Backend:
         environment.update(PDK_ROOT=str(self.pdk_root), DESIGNS=str(self.workspace))
         probe = 'source "$1" >&2 || exit $?; shift; for tool in "$@"; do command -v "$tool" >/dev/null && printf "%s\\n" "$tool"; done; exit 0'
         process = subprocess.Popen(['env', '-u', 'BASH_ENV', 'bash', '--noprofile', '--norc',
-                                    '-c', probe, 'unic-cass-probe', str(self.config), *TOOLS],
+                                    '-c', probe, 'ac3e-ic-toolbox-probe', str(self.config), *TOOLS],
                                    env=environment, cwd=self.workspace, stdin=subprocess.DEVNULL,
                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
         try:
@@ -181,7 +181,7 @@ class Backend:
                     return
                 process = subprocess.Popen(
                     ['env', '-u', 'BASH_ENV', 'bash', '--noprofile', '--norc', '-c',
-                     RUN, 'unic-cass-mcp', str(self.config), pdk, *argv],
+                     RUN, 'ac3e-ic-toolbox-mcp', str(self.config), pdk, *argv],
                     cwd=job['output_dir'], env=environment, stdin=subprocess.DEVNULL,
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
                 job['process'] = process
@@ -329,7 +329,7 @@ class Backend:
 def create_server(manager):
     """Lazy import keeps host unittest discovery independent of the pinned SDK."""
     from mcp.server.fastmcp import FastMCP
-    server = FastMCP('UNIC-CASS EDA', instructions=(
+    server = FastMCP('ac3e-ic-toolbox EDA', instructions=(
         'Trusted local clients only. Scripts/config/netlists are executable, not sandboxed. '
         'Jobs are session-owned; disconnect cancels jobs; output files persist. '
         'At most two jobs at once; script runners are not turnkey DRC/LVS.'))
@@ -343,7 +343,7 @@ def create_server(manager):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workspace', default='/foss/designs')
-    parser.add_argument('--config', default='/opt/unic-cass/config/unic-cass-env.sh')
+    parser.add_argument('--config', default='/opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh')
     parser.add_argument('--pdk-root', default='/opt/pdks')
     args = parser.parse_args(argv)
     manager = Backend(args.workspace, args.config, args.pdk_root)

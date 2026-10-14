@@ -57,7 +57,10 @@ GTKWave is currently supplied by apt rather than the commented source-build
 stage. The inventory records installed executable paths, not proof that all
 floating apt/Python/Nix packages match a source revision.
 
-## Confirmed installation gaps in the tested 2.0.0 image
+## Historical installation gaps in the tested 2.0.0 baseline
+
+These results describe the historical baseline, not verification of the current
+`isaiash/ac3e-ic-toolbox:0.1.0` image. Rebuild and rerun the suite to validate it.
 
 - Xyce has a builder stage but is not copied to the final image.
 - MCY is listed in the manifest but its installation block is commented out.
@@ -74,5 +77,5 @@ Host repository contracts run separately:
 
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py' -v
-UID_RUNTIME_IMAGE=isaiassh/unic-cass-tools:2.0.0 python3 -m unittest discover -s tests -p test_uid_runtime.py -v
+UID_RUNTIME_IMAGE=isaiash/ac3e-ic-toolbox:0.1.0 python3 -m unittest discover -s tests -p test_uid_runtime.py -v
 ```

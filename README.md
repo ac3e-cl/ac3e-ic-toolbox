@@ -1,11 +1,11 @@
-# AC3E IC Design Tools
+# AC3E IC Toolbox
 
-[![Docker Image Version](https://img.shields.io/docker/v/isaiassh/unic-cass-tools?sort=semver&style=flat-square&logo=docker&label=Release)](https://hub.docker.com/r/isaiassh/unic-cass-tools/tags)
+[![Docker Image Version](https://img.shields.io/docker/v/isaiash/ac3e-ic-toolbox?sort=semver&style=flat-square&logo=docker&label=Release)](https://hub.docker.com/r/isaiash/ac3e-ic-toolbox/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg?style=flat-square)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=Issues&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=PRs&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/pulls)
 [![Contributors](https://img.shields.io/github/contributors/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=Contributors&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/graphs/contributors)
-[![Docker Pulls](https://img.shields.io/docker/pulls/isaiassh/unic-cass-tools?style=flat-square&label=Pulls&logo=docker)](https://hub.docker.com/r/isaiassh/unic-cass-tools)
+[![Docker Pulls](https://img.shields.io/docker/pulls/isaiash/ac3e-ic-toolbox?style=flat-square&label=Pulls&logo=docker)](https://hub.docker.com/r/isaiash/ac3e-ic-toolbox)
 
 ---
 
@@ -35,7 +35,7 @@ with `make rm` before recreating it, or use `make attach` to resume it.
 For a terminal without an X server, clone the repository and use `make start-raw`.
 The bootstrap URL becomes available when this change is merged into `main`.
 
-The AC3E IC Design Tools repository provides a comprehensive, open-source suite of tools for integrated circuit design, simulation, and verification.
+The AC3E IC Toolbox repository provides an open-source suite of tools for integrated circuit design, simulation, and verification.
 
 This work is based on:
 
@@ -45,7 +45,7 @@ This work is based on:
 - GoCD NGSpice Agents for CICD VLSI Verification
 - Open Source Integrated Circuits Docker Stacks
 
-**New in v1.0.3**: This image now integrates **[LibreLane](https://github.com/librelane/librelane)** (v3.0.0.dev40), a modern ASIC implementation flow based on OpenROAD, Yosys, Magic, and Netgen. LibreLane provides a complete RTL-to-GDSII flow with support for IHP-sg13g2, Sky130, and GF180MCU PDKs, powered by the Nix package manager for reproducible builds.
+The standard image includes **[LibreLane](https://github.com/librelane/librelane)**, an ASIC implementation flow based on OpenROAD, Yosys, Magic, and Netgen. LibreLane provides a complete RTL-to-GDSII flow with support for IHP-sg13g2, Sky130, and GF180MCU PDKs, powered by the Nix package manager. Its source revision is pinned in `manifest.json`.
 
 We welcome contributions from the global IC design community!
 
@@ -61,21 +61,39 @@ We welcome contributions from the global IC design community!
 
 ## How to Use
 
-Create your local environment configuration from the committed example before building or running the image:
+No local configuration is required. The manifest defaults to
+`isaiash/ac3e-ic-toolbox:0.1.0`. To customize your workstation, optionally create
+`.env` with literal `KEY=value` lines, for example:
 
 ```bash
-cp .env.example .env
+# Optional .env contents (replace with your absolute host path):
+DESIGNS=/home/your-user/eda/designs
+PDK=ihp-sg13g2
 ```
 
 Edit `.env` to override the Docker image name or tag, PDK, shared directory,
-ports, or build behavior. Make targets load it automatically. When invoking a
-script in `build/` directly, first run
-`set -a; source .env; set +a`.
+ports, or build behavior. Make targets and launchers read it without evaluating
+shell code; exported environment values take precedence. Do not use `export`,
+command substitution, `$HOME`, or `~` expansion in `.env`. Direct scripts in
+`build/` do not load `.env`: pass environment assignments explicitly, or use
+`make build`. There is no required `.env.example` file.
 
 Docker, GNU Make, Bash, and `jq` are required for local builds. The committed
 [`manifest.json`](manifest.json) is the source of truth for the release version,
 image coordinates, final Docker target, and all source URLs and revisions passed
 to the Dockerfile. Values in `.env` are optional workstation overrides.
+
+The final `ac3e-ic-toolbox` Docker stage is the standard image and includes
+Nix/LibreLane. `ac3e-ic-toolbox-base` is its intermediate EDA assembly stage,
+not a separate standard runtime variant. Current build commands are:
+
+```bash
+make build
+./build/build-image.sh
+./build/build-stage.sh magic
+make STAGE=ihp_pdk build
+CHECK_ONLY=1 ./build/build-image.sh
+```
 
 ### Linux
 
@@ -104,7 +122,7 @@ permits traversal, not listing or writing, for other users. Direct `docker run
 ```bash
 DESIGNS="$HOME/eda/designs" PDK=gf180mcuD ./start_shell.sh
 DRY_RUN=1 ./start_vnc.sh       # Inspect command without Docker/mkdir side effects
-ENABLE_GUI=1 BUILD_IMAGE_TAG=unic-cass-compat:gui ./build/build-image.sh
+ENABLE_GUI=1 BUILD_IMAGE_TAG=ac3e-ic-toolbox:gui ./build/build-image.sh
 ```
 
 VNC requires an image built with `ENABLE_GUI=1`; changing that variable when
@@ -240,15 +258,15 @@ ports, HTTP service, or additional host Python environment are needed.
 
    ```bash
    container=eda-workbench  # Replace with your running container's name.
-   hermes mcp add unic-cass --command docker --args exec -i "$container" /opt/unic-cass/mcp/bin/unic-cass-mcp
-   hermes mcp test unic-cass
+   hermes mcp add ac3e-ic-toolbox --command docker --args exec -i "$container" /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
+   hermes mcp test ac3e-ic-toolbox
    ```
 
 3. Start a new Hermes session and ask:
 
    > Inspect the EDA environment and list installed PDKs. Do not start a job yet.
 
-Hermes discovers tools with the `mcp_unic_cass_` prefix. Registration stores
+Hermes discovers tools with the `mcp_ac3e_ic_toolbox_` prefix. Registration stores
 the container name, so the connection does not depend on the image tag. Keep
 that name when recreating or upgrading the container. `--args` must be the last
 Hermes option; use `-i`, never `-t`, for MCP stdio.
@@ -257,7 +275,7 @@ If connection fails, check that Docker is accessible to Hermes, the container
 is running, and the server is installed:
 
 ```bash
-docker exec -i "$container" /opt/unic-cass/mcp/bin/unic-cass-mcp --help
+docker exec -i "$container" /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp --help
 ```
 
 If the command is missing, use an MCP-enabled image or rebuild with `make
@@ -270,12 +288,16 @@ server being present, not a particular release number.
 Use the same stdio command with any MCP client:
 
 ```bash
-docker exec -i "$container" /opt/unic-cass/mcp/bin/unic-cass-mcp
+docker exec -i "$container" /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
 ```
 
 Set the client's executable to `docker` and its arguments to `exec`, `-i`,
-your container name, and `/opt/unic-cass/mcp/bin/unic-cass-mcp`. The client
+your container name, and `/opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp`. The client
 launches this command; you do not need to run a separate MCP service.
+The launcher uses `/opt/ac3e-ic-toolbox/mcp` by default;
+`AC3E_IC_TOOLBOX_MCP_HOME` overrides that installation home inside the container.
+The default runtime configuration is
+`/opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh`.
 See [Hermes MCP](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp),
 [Claude Code MCP](https://code.claude.com/docs/en/mcp), or
 [Codex MCP](https://developers.openai.com/codex/mcp/) for client options.
@@ -284,7 +306,7 @@ See [Hermes MCP](https://hermes-agent.nousresearch.com/docs/user-guide/features/
 
 The canonical container workspace is `/foss/designs`, backed by the host
 `DESIGNS` directory (default: `shared/`). Use container paths in tool calls, not
-host paths. Job outputs live beneath `.unic-cass-mcp/` in that workspace, with
+host paths. Job outputs live beneath `.ac3e-ic-toolbox-mcp/` in that workspace, with
 a separate directory identified by each job's UUID; they remain on the host
 mount after the MCP connection or container exits.
 
@@ -309,7 +331,7 @@ refer to files/directories inside the container. Append overrides to the server
 command in your client configuration, for example:
 
 ```bash
-docker exec -i "$container" /opt/unic-cass/mcp/bin/unic-cass-mcp --workspace /foss/designs
+docker exec -i "$container" /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp --workspace /foss/designs
 ```
 
 Use `--help` and the server configuration/schema for the available policy
@@ -369,13 +391,13 @@ MCP requirements rather than modifying the host's system Python:
 
 ```bash
 # From the repository root:
-python3 -m venv "$HOME/.cache/unic-cass-mcp-venv"
-"$HOME/.cache/unic-cass-mcp-venv/bin/python" -m pip install -r images/mcp/requirements.txt
+python3 -m venv "$HOME/.cache/ac3e-ic-toolbox-mcp-venv"
+"$HOME/.cache/ac3e-ic-toolbox-mcp-venv/bin/python" -m pip install -r images/mcp/requirements.txt
 # Opt-in live test: eda-workbench must already be running the rebuilt image.
 # MCP_TEST_WORKSPACE is the HOST directory mounted as /foss/designs.
-export MCP_TEST_COMMAND='["docker","exec","-i","eda-workbench","/opt/unic-cass/mcp/bin/unic-cass-mcp"]'
+export MCP_TEST_COMMAND='["docker","exec","-i","eda-workbench","/opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp"]'
 export MCP_TEST_WORKSPACE="$PWD/shared"
-"$HOME/.cache/unic-cass-mcp-venv/bin/python" -m unittest discover -s tests -p 'test_mcp_protocol.py' -v
+"$HOME/.cache/ac3e-ic-toolbox-mcp-venv/bin/python" -m unittest discover -s tests -p 'test_mcp_protocol.py' -v
 unset MCP_TEST_COMMAND MCP_TEST_WORKSPACE
 # Dependency-free host contracts and the default unittest discovery:
 python3 -m unittest discover -s tests -p 'test_*.py' -v
@@ -461,7 +483,7 @@ bash /home/designer/tests/run_all.sh
 # Optional host convenience command (starts a temporary container):
 make test
 # An explicit local image, without changing manifest.json:
-DOCKER_USER= DOCKER_IMAGE=unic-cass-compat DOCKER_TAG=gui make test
+DOCKER_USER= DOCKER_IMAGE=ac3e-ic-toolbox DOCKER_TAG=gui make test
 ```
 
 Tests are organized under `tests/analog/`, `digital/`, `gui/`, `inventory/` and
@@ -518,8 +540,8 @@ To publish a release:
 3. Create and push the matching branch, for example:
 
    ```bash
-   git switch -c release/1.3.0
-   git push origin release/1.3.0
+   git switch -c release/0.1.0
+   git push origin release/0.1.0
    ```
 
 The workflow validates the manifest and Dockerfile, builds the image through

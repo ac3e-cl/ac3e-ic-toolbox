@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 if [ -n "${BASH_VERSION:-}" ]; then
-    if [[ -f /opt/unic-cass/config/unic-cass-env.sh ]]; then
-        source /opt/unic-cass/config/unic-cass-env.sh
+    if [[ -f /opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh ]]; then
+        source /opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh
     else
-        source "${BASH_SOURCE[0]%/*}/unic-cass-env.sh"
+        source "${BASH_SOURCE[0]%/*}/ac3e-ic-toolbox-env.sh"
     fi
 fi

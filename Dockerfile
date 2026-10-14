@@ -415,9 +415,9 @@ RUN --mount=type=bind,source=images/orfs,target=/images/orfs \
 
 
 #######################################################################
-# Final output container
+# Shared runtime for the standard image
 #######################################################################
-FROM base AS unic-cass-tools
+FROM base AS ac3e-ic-toolbox-base
 ARG NGSPICE_REPO_COMMIT \
     OPEN_PDKS_REPO_COMMIT \
     MAGIC_REPO_COMMIT \
@@ -488,10 +488,10 @@ RUN mkdir -p /run/user/1000 && \
 RUN chown -R designer:designer /opt/pdks/ihp-sg13g2/
 
 # One runtime configuration for interactive, login and batch shells.
-COPY images/final_structure/configure/pdk.sh /opt/unic-cass/config/
-COPY images/final_structure/configure/unic-cass-env.sh /opt/unic-cass/config/
-COPY images/final_structure/configure/profile.sh /opt/unic-cass/config/
-COPY images/final_structure/configure/profile.sh /etc/profile.d/unic-cass-tools.sh
+COPY images/final_structure/configure/pdk.sh /opt/ac3e-ic-toolbox/config/
+COPY images/final_structure/configure/ac3e-ic-toolbox-env.sh /opt/ac3e-ic-toolbox/config/
+COPY images/final_structure/configure/profile.sh /opt/ac3e-ic-toolbox/config/
+COPY images/final_structure/configure/profile.sh /etc/profile.d/ac3e-ic-toolbox.sh
 COPY images/final_structure/configure/.bashrc /home/designer/.bashrc
 COPY images/final_structure/configure/.bashrc /root/.bashrc
 RUN mkdir -p /foss && \
@@ -532,9 +532,9 @@ ENV NGSPICE_REPO_COMMIT=${NGSPICE_REPO_COMMIT} \
     NETGEN_REPO_COMMIT=${NETGEN_REPO_COMMIT}
 
 #######################################################################
-# Add Nix package manager and LibreLane
+# Standard output image, including Nix package manager and LibreLane
 #######################################################################
-FROM unic-cass-tools AS unic-cass-tools-nix
+FROM ac3e-ic-toolbox-base AS ac3e-ic-toolbox
 ARG NIX_INSTALLER_URL \
     NIX_SUBSTITUTER_URL \
     NIX_SUBSTITUTER_PUBLIC_KEY \

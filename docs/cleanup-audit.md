@@ -6,7 +6,7 @@ CI and documentation using `git grep`; every file below was read before removal.
 
 | Removed path | Evidence / replacement |
 | --- | --- |
-| `images/final_structure/configure/.bashrc_nix` | No active consumer; shared `unic-cass-env.sh` replaces alternate Nix configuration |
+| `images/final_structure/configure/.bashrc_nix` | No active consumer; shared `ac3e-ic-toolbox-env.sh` replaces alternate Nix configuration |
 | `images/final_structure/configure/.bashrc_with_nix` | No active consumer; duplicated tools/PDK setup with different defaults |
 | `images/final_structure/configure/install_librelane_nix.sh` | No active consumer; floated dev checkout conflicts with manifest-pinned Dockerfile installation |
 | `images/adms/install.sh` | No consumer and no source acquisition; selected target never calls it |
@@ -15,7 +15,7 @@ CI and documentation using `git grep`; every file below was read before removal.
 | `handled_build.sh` | No active consumer; invalid openroad stage, deleted old logs and hid build errors; use build wrappers with pipefail/tee as documented in CONTRIBUTING.md |
 | `shared_xserver/verification/gf180mcu/pdk_comparison/gf180mcu_patching.sh` | Exploratory duplicate patch code depending on external unmanaged clones; maintained GF installer/patch/tests replace it |
 | `shared_xserver/verification/gf180mcu/pdk_comparison/difference.sh` | Comparison experiment requiring external unmanaged clones; not part of any test or pipeline |
-| Docker stage `unic-cass-tools-temp` | Empty descendant with no consumer; manifest still targets `unic-cass-tools-nix` |
+| Obsolete temporary Docker stage | Empty descendant with no consumer; the current manifest targets `ac3e-ic-toolbox`, including Nix/LibreLane, above the intermediate `ac3e-ic-toolbox-base` stage |
 
 Retained: tool dependencies and optional Xyce/GTKWave installers, `draw_efuse.py`,
 `fix-tech-file.py`, IHP/Sky patches, notebooks, .mat files, GDS/schematics, original

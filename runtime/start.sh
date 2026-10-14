@@ -39,7 +39,7 @@ gid=${CONTAINER_GROUP:-${USER_GROUP:-$(id -g)}}
 [[ $uid =~ ^[0-9]+$ && $gid =~ ^[0-9]+$ ]] || { echo 'UID/GID must be numeric' >&2; exit 2; }
 identity_mode=$mode
 case $mode in attach|rm|print) identity_mode=x;; esac
-name=${CONTAINER_NAME:-unic-cass-tools_${identity_mode}_uid_${uid}}
+name=${CONTAINER_NAME:-ac3e-ic-toolbox_${identity_mode}_uid_${uid}}
 
 argv=(docker run --name "$name" --user "$uid:$gid" --mount "type=bind,source=$designs,target=/home/designer/shared" --mount "type=bind,source=$root/tests,target=/home/designer/tests" --env SHELL=/bin/bash --env "PDK=${PDK:-ihp-sg13g2}")
 for setting in STD_CELL_LIBRARY VNC_PW VNC_RESOLUTION TEST_TIMEOUT; do
@@ -74,8 +74,8 @@ fi
 # Keep the installed single-user Nix profile as a read-only executable source.
 # Image prerequisite: /home/designer must be traversable by arbitrary UIDs.
 bootstrap='set -eu; ln -s /home/designer/.nix-profile "$HOME/.nix-profile"; cp /home/designer/.bashrc "$HOME/.bashrc"; exec /entrypoint.sh "$@"'
-argv+=(--tmpfs "/tmp/unic-cass-home:rw,nosuid,nodev,mode=0700,uid=$uid,gid=$gid" --env HOME=/tmp/unic-cass-home --entrypoint /bin/bash)
-argv+=("$reference" --noprofile --norc -c "$bootstrap" unic-cass-home)
+argv+=(--tmpfs "/tmp/ac3e-ic-toolbox-home:rw,nosuid,nodev,mode=0700,uid=$uid,gid=$gid" --env HOME=/tmp/ac3e-ic-toolbox-home --entrypoint /bin/bash)
+argv+=("$reference" --noprofile --norc -c "$bootstrap" ac3e-ic-toolbox-home)
 case $mode in
     shell|x|attach) argv+=(--shell); if (( $# )); then argv+=("$@"); else argv+=(/bin/bash); fi;;
     vnc) argv+=(--vnc --wait "$@");;

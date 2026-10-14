@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "release": {
-    "version": "2.0.0"
+    "version": "0.1.0"
   },
   "image": {
     "registry": "docker.io",
@@ -9,7 +9,7 @@
     "name": "ac3e-ic-toolbox"
   },
   "build": {
-    "target": "unic-cass-tools-nix",
+    "target": "ac3e-ic-toolbox",
     "arguments": {
       "BASE_IMAGE": "ubuntu:22.04",
       "ENABLE_GUI": "",
