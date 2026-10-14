@@ -43,6 +43,20 @@ class RepositoryContract(unittest.TestCase):
         self.assertIn('ln -s /home/designer/shared /foss/designs', dockerfile)
         self.assertNotIn('ac3e-ic-toolbox-temp', dockerfile)
 
+    def test_shell_startup_sources_installed_profile(self):
+        dockerfile = (ROOT / 'Dockerfile').read_text()
+        match = re.search(
+            r'^COPY images/final_structure/configure/profile\.sh (\S+)/$',
+            dockerfile, re.M)
+        self.assertIsNotNone(match)
+        assert match is not None
+        destination = match.group(1)
+        for name in ('.bashrc', 'etc_bash.bashrc_nix'):
+            with self.subTest(startup=name):
+                text = (ROOT / 'images/final_structure/configure' / name).read_text()
+                self.assertIn(f'[[ -f {destination}/profile.sh ]]', text)
+                self.assertIn(f'source {destination}/profile.sh', text)
+
     def test_build_mount_sources_exist(self):
         text = (ROOT / 'Dockerfile').read_text()
         active = '\n'.join(line for line in text.splitlines()

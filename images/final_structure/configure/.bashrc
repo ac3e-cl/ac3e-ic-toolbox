@@ -1,6 +1,6 @@
 # shellcheck shell=bash
-if [[ -f /opt/unic-cass/config/profile.sh ]]; then
-    source /opt/unic-cass/config/profile.sh || return $?
+if [[ -f /opt/ac3e-ic-toolbox/config/profile.sh ]]; then
+    source /opt/ac3e-ic-toolbox/config/profile.sh || return $?
 else
     source "${BASH_SOURCE[0]%/*}/profile.sh" || return $?
 fi
