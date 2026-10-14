@@ -102,7 +102,46 @@ jobs:
           BUILD_IMAGE_TAG: ${{ env.RELEASE_IMAGE }}
           DOCKER_TAG: ${{ env.RELEASE_VERSION }}
           BUILDKIT_PROGRESS: plain
-        run: ./build/build-image.sh
+        run: |
+          set -Eeuo pipefail
+          diagnostics="${RUNNER_TEMP}/build-diagnostics.log"
+          snapshot() {
+            date -u
+            df -h / /var/lib/docker
+            df -i / /var/lib/docker
+            free -h
+          }
+          monitor() {
+            while true; do
+              snapshot
+              sleep 30
+            done
+          }
+          monitor > "${diagnostics}" 2>&1 &
+          monitor_pid=$!
+          finish_build_diagnostics() {
+            status=$?
+            trap - EXIT
+            kill "${monitor_pid}" 2>/dev/null || true
+            wait "${monitor_pid}" 2>/dev/null || true
+            snapshot >> "${diagnostics}" 2>&1 || true
+            sudo journalctl -k --since '-15 minutes' --no-pager >> "${diagnostics}" 2>&1 || true
+            sudo journalctl -u docker --since '-15 minutes' --no-pager >> "${diagnostics}" 2>&1 || true
+            cat "${diagnostics}"
+            exit "${status}"
+          }
+          trap finish_build_diagnostics EXIT
+          trap 'exit 143' TERM
+          trap 'exit 130' INT
+          ./build/build-image.sh
+
+      - name: Preserve build diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-diagnostics
+          path: ${{ runner.temp }}/build-diagnostics.log
+          if-no-files-found: ignore
 
       - name: Run integration tests
         env:
