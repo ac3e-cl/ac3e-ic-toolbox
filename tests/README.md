@@ -44,6 +44,20 @@ Only required fixtures are in `data/`. Generated artifacts, individual logs,
 ignored `run/` directory. Small self-checking designs are used; only the retained
 LibreLane smoke tests run complete flows. These checks are not fabrication signoff.
 
+## CVC input line endings
+
+CVC 1.1.5 requires LF line endings in its configuration: a CR from CRLF can
+become part of input and report filenames, even while CVC exits successfully.
+The repository enforces LF for all four CVC fixtures through `.gitattributes`,
+including checkouts with `core.autocrlf=true`. The electrical test rejects a
+CRLF configuration explicitly rather than silently modifying its inputs.
+
+Existing Windows/WSL checkouts may still contain CRLF files after updating.
+Convert `tests/data/analog/cvc.cvcrc`, `cvc-inverter.cdl`, `cvc-models` and
+`cvc-power` to LF using an editor's line-ending setting, preserving any local
+edits. Check with `git ls-files --eol tests/data/analog/cvc*`; each working-tree
+entry should show `w/lf`. No global Git configuration change is required.
+
 ## Coverage
 
 | Manifest tool | Functional check |

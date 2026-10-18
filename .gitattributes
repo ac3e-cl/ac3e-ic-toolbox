@@ -192,3 +192,9 @@ setwallpaper             text eol=lf
 startserver              text eol=lf
 *.desktop                text eol=lf
 xschemrc                 text eol=lf
+
+# CVC fixtures require Unix line endings, including on Windows checkouts.
+tests/data/analog/cvc.cvcrc        text eol=lf
+tests/data/analog/cvc-inverter.cdl text eol=lf
+tests/data/analog/cvc-models       text eol=lf
+tests/data/analog/cvc-power        text eol=lf
