@@ -30,6 +30,14 @@ if [[ "$mode" == shell || "$mode" == x11 ]]; then
         printf 'X11 requires DISPLAY\n' >&2; exit 2
     fi
     if (( $# )); then exec "$@"; fi
+    if [[ "$mode" == x11 ]]; then
+        # A Desktop start has no attached terminal. Keep xterm in the foreground
+        # so PID 1 lives as long as the window, for local or TCP X11 displays.
+        if ! command -v xterm >/dev/null; then
+            printf 'X11 terminal unavailable: xterm is required in the image\n' >&2; exit 2
+        fi
+        exec xterm -e /bin/bash -i
+    fi
     exec /bin/bash -i
 fi
 if [[ "${ENABLE_GUI:-}" != 1 ]]; then

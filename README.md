@@ -158,6 +158,12 @@ and [cleanup audit](docs/cleanup-audit.md).
 
 ### Linux quick start
 
+To open an external terminal when pressing **Play** in Docker Desktop, see
+[Docker Desktop terminal setup](docs/docker-desktop-terminal.md), including
+Linux, macOS/XQuartz and Windows/WSL configuration. An X11 startup without an
+explicit command now opens `xterm`; command-line launchers retain their attached
+shell behavior. Existing containers must be recreated to use the updated image.
+
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/ac3e-cl/ac3e-ic-toolbox.git
