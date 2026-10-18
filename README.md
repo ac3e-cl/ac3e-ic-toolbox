@@ -78,7 +78,7 @@ No local configuration is required. The manifest defaults to
 
 ```bash
 # Optional .env contents (replace with your absolute host path):
-DESIGNS=/home/your-user/eda/designs
+SHARED_DIR=/home/your-user/eda/designs
 PDK=ihp-sg13g2
 ```
 
@@ -87,7 +87,17 @@ ports, or build behavior. Make targets and launchers read it without evaluating
 shell code; exported environment values take precedence. Do not use `export`,
 command substitution, `$HOME`, or `~` expansion in `.env`. Direct scripts in
 `build/` do not load `.env`: pass environment assignments explicitly, or use
-`make build`. There is no required `.env.example` file.
+`make build`. An optional `.env.example` documents local settings.
+
+On the first interactive `make start` (also raw, VNC, and notebook starts),
+you are asked in English for your development directory. Press Enter to use
+the repository's `shared/`. The choice is saved as an absolute `SHARED_DIR`
+in the Git-ignored `.env`, preserving other settings; `.env` is created if
+missing. An existing directory is used silently. A missing directory is
+created and reported as empty. Edit `.env` to change the saved choice.
+Explicit `SHARED_DIR` or `DESIGNS` settings skip the prompt and are not
+automatically saved. Non-interactive starts use the default without prompting;
+dry runs, builds, tests, and configuration inspection never prompt or save it.
 
 Docker, GNU Make, Bash, and `jq` are required for local builds. The committed
 [`manifest.json`](manifest.json) is the source of truth for the release version,
@@ -120,8 +130,8 @@ All launchers share the same runtime configuration; Make targets remain aliases:
 | `./start_jupyter.sh` | `make start-notebook` | Authenticated Jupyter Lab |
 
 Runtime scripts read optional `.env` settings without evaluating shell code;
-explicit environment overrides take precedence. `DESIGNS` names the host design
-directory (default: the initially empty `shared/`); `SHARED_DIR` remains a legacy alias. Do not set them to different
+explicit environment overrides take precedence. `SHARED_DIR` names the host design
+directory (default: the initially empty `shared/`); `DESIGNS` is also supported. Do not set them to different
 directories. Shells use the host UID/GID by default (`CONTAINER_USER` and
 `CONTAINER_GROUP` override them); `ROOT=1` explicitly requests root.
 Launchers provide a private, ephemeral tmpfs HOME owned by that UID/GID and

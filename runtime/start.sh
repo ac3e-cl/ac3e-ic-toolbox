@@ -30,9 +30,48 @@ reference=$image:$tag
 if [[ -n ${DESIGNS:-} && -n ${SHARED_DIR:-} && $DESIGNS != "$SHARED_DIR" ]]; then
     echo 'DESIGNS and SHARED_DIR conflict' >&2; exit 2
 fi
+configure_shared=0
+case $mode in
+    shell|x|vnc|jupyter)
+        if [[ ${DRY_RUN:-0} != 1 ]]; then
+            # Keep other local settings intact, including files without a final newline.
+            [[ -e $env_file ]] || (umask 077; touch -- "$env_file")
+            if [[ -z ${DESIGNS:-} && -z ${SHARED_DIR:-} && -t 0 ]]; then
+                printf 'Choose your development directory.\nIt will be mounted at /home/designer/shared inside the container.\nDevelopment directory [%s]: ' "$root/shared" >&2
+                IFS= read -r selected || { echo 'Directory selection cancelled.' >&2; exit 2; }
+                SHARED_DIR=${selected:-$root/shared}
+                # Expand a leading home shortcut without evaluating shell code.
+                if [[ $SHARED_DIR == '~' ]]; then SHARED_DIR=$HOME
+                elif [[ $SHARED_DIR == '~/'* ]]; then SHARED_DIR=$HOME/${SHARED_DIR:2}; fi
+                configure_shared=1
+            fi
+        fi;;
+esac
 designs=${DESIGNS:-${SHARED_DIR:-$root/shared}}
 [[ $designs == /* ]] || designs=$PWD/$designs
 [[ $designs != *,* ]] || { echo 'Docker bind paths cannot contain commas' >&2; exit 2; }
+if (( configure_shared )); then
+    [[ $designs != *$'\n'* && $designs != *$'\r'* ]] || { echo 'Directory paths cannot contain line breaks' >&2; exit 2; }
+    if [[ ! -d $designs ]]; then
+        mkdir -p -- "$designs"
+        printf 'The directory did not exist; created an empty directory: %s\n' "$designs" >&2
+    fi
+    [[ -r $designs && -w $designs && -x $designs ]] || { echo 'Development directory is not accessible and writable' >&2; exit 2; }
+    # Last assignment wins on future loads; replace an empty setting rather than
+    # appending a duplicate that the literal loader would ignore.
+    python3 - "$env_file" "$designs" <<'PY'
+import pathlib
+import sys
+path = pathlib.Path(sys.argv[1])
+lines = path.read_text().splitlines(keepends=True)
+lines = [line for line in lines if not line.startswith('SHARED_DIR=')]
+text = ''.join(lines)
+if text and not text.endswith('\n'):
+    text += '\n'
+with path.open('w') as stream:
+    stream.write(text + 'SHARED_DIR=' + sys.argv[2] + '\n')
+PY
+fi
 uid=${CONTAINER_USER:-${USER_ID:-$(id -u)}}
 gid=${CONTAINER_GROUP:-${USER_GROUP:-$(id -g)}}
 [[ -z ${ROOT:-} ]] || { uid=0; gid=0; }
