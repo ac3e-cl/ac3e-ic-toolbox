@@ -30,8 +30,14 @@ An existing destination is never overwritten. Choose another directory with
 `bash quickstart.sh "$HOME/eda-tools"`.
 
 For later sessions, run `cd ac3e-ic-toolbox && make start`.
-Designs persist in `shared/`; remove an existing stopped container explicitly
-with `make rm` before recreating it, or use `make attach` to resume it.
+Designs persist in `shared/`. `make start` resumes the existing stopped container
+when its image reference and design directory match; `make attach` also resumes it.
+The shell, VNC, and Jupyter launchers likewise reuse their stopped containers.
+Reused containers keep their original configuration and command: to apply changed
+ports, environment, image contents, or other creation options, remove the stopped
+container explicitly before launching again (`make rm` for the default X container).
+If the container is already running, the launcher prints a `docker exec` command
+to open another shell without stopping or recreating it.
 For a terminal without an X server, clone the repository and use `make start-raw`.
 The bootstrap URL becomes available when this change is merged into `main`.
 

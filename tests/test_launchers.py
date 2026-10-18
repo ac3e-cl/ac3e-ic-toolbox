@@ -97,6 +97,50 @@ class Launchers(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn('private-value', result.stdout)
 
+    def existing_container(self, mode='x', running=False, compatible=True):
+        with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
+            path = Path(tmp)
+            name = 'launcher-regression'
+            state = [{'Config': {'Image': f'isaiash/ac3e-ic-toolbox:{VERSION}' if compatible else 'other:image'},
+                      'Mounts': [{'Source': tmp, 'Destination': '/home/designer/shared'}],
+                      'State': {'Running': running}}]
+            (path / 'state.json').write_text(json.dumps(state))
+            docker = path / 'docker'
+            docker.write_text('#!/bin/bash\n'
+                              'python3 -c \'import json,os,sys; open(os.environ["CALLS"], "a").write(json.dumps(sys.argv[1:])+"\\n")\' "$@"\n'
+                              'if [[ $1 == container && $2 == ls ]]; then printf "%s\\n" "$CONTAINER_NAME"; fi\n'
+                              'if [[ $1 == container && $2 == inspect ]]; then /bin/cat "$STATE"; fi\n')
+            docker.chmod(0o755)
+            result = self.launch(mode, DRY_RUN='0', PATH=tmp + ':' + os.environ['PATH'],
+                                 DESIGNS=tmp, DISPLAY=':0', CONTAINER_NAME=name,
+                                 DOCKER_USER='isaiash', DOCKER_IMAGE='ac3e-ic-toolbox', DOCKER_TAG=VERSION,
+                                 CALLS=str(path / 'calls'), STATE=str(path / 'state.json'))
+            calls = [json.loads(line) for line in (path / 'calls').read_text().splitlines()]
+            return result, calls
+
+    def test_start_resumes_compatible_stopped_container(self):
+        for mode in ('x', 'shell', 'vnc', 'jupyter'):
+            with self.subTest(mode=mode):
+                result, calls = self.existing_container(mode)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                expected = ['container', 'start']
+                if mode in ('x', 'shell'):
+                    expected += ['-ai']
+                self.assertEqual(calls[-1], expected + ['launcher-regression'])
+                self.assertFalse(any(call[0] in ('run', 'image') for call in calls))
+
+    def test_start_refuses_incompatible_stopped_container(self):
+        result, calls = self.existing_container(compatible=False)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('Container exists', result.stderr)
+        self.assertEqual(calls[-1], ['container', 'inspect', 'launcher-regression'])
+
+    def test_start_running_container_reports_exec_without_recreating(self):
+        result, calls = self.existing_container(running=True)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('docker exec -it launcher-regression /bin/bash', result.stderr)
+        self.assertEqual(calls[-1], ['container', 'inspect', 'launcher-regression'])
+
     def test_docker_failure_status_is_propagated(self):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
             docker = Path(tmp) / 'docker'

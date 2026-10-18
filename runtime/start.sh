@@ -116,10 +116,13 @@ if printf '%s\n' "$existing" | python3 -c 'import sys; sys.exit(0 if sys.argv[1]
     decision=$(python3 -c 'import json,sys; c=json.load(sys.stdin)[0]; mounts=c.get("Mounts",[]); ok=c["Config"]["Image"]==sys.argv[1] and any(m.get("Source")==sys.argv[2] and m.get("Destination")=="/home/designer/shared" for m in mounts); print("running" if c["State"]["Running"] else "same" if ok else "different")' "$reference" "$designs" <<< "$state")
     if [[ $decision == running ]]; then
         echo "Container is running; use: docker exec -it $name /bin/bash" >&2; exit 2
-    elif [[ $decision == different || $mode != attach ]]; then
-        echo 'Container exists; explicitly remove it to recreate, or use make attach for compatible stopped containers.' >&2; exit 2
+    elif [[ $decision == different || $mode == test ]]; then
+        echo 'Container exists with incompatible configuration or test mode; explicitly remove it to recreate.' >&2; exit 2
     fi
-    exec docker container start -ai "$name"
+    case $mode in
+        shell|x|attach) exec docker container start -ai "$name";;
+        vnc|jupyter) exec docker container start "$name";;
+    esac
 fi
 if [[ -z ${NO_PULL:-} ]] && ! docker image inspect "$reference" >/dev/null 2>&1; then
     docker image pull "$reference"
