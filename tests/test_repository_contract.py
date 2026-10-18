@@ -39,6 +39,10 @@ class RepositoryContract(unittest.TestCase):
                                if line.startswith('COPY --from=')]
         expected_stages = stages(before)[:-2]
         expected_stages.insert(expected_stages.index('xyce'), 'gnucap')
+        expected_stages[expected_stages.index('magic'):expected_stages.index('magic')] = [
+            'heavyweight_builder', 'openroad_dependencies']
+        expected_stages[expected_stages.index('open_pdks'):expected_stages.index('open_pdks')] = [
+            'pdk_builder', 'sky130_pdk', 'gf180_pdk']
         # The final two stages are renamed, not new tools or a separate Nix variant.
         self.assertEqual(stages(after)[:-2], expected_stages)
         self.assertEqual(stages(after)[-2:], ['ac3e-ic-toolbox-base', 'ac3e-ic-toolbox'])
@@ -46,6 +50,15 @@ class RepositoryContract(unittest.TestCase):
         ngspice_copy = ['COPY', '--from=ngspice', '${TOOLS}/ngspice', '${TOOLS}/ngspice']
         expected_copies.insert(expected_copies.index(ngspice_copy) + 1,
                                ['COPY', '--from=gnucap', '${TOOLS}/gnucap', '${TOOLS}/gnucap'])
+        # Explicit structural additions only: retain the final tool inventory and
+        # copy the entire PDK roots so Volare-relative links remain resolvable.
+        expected_copies[:0] = [
+            ['COPY', '--from=sky130_pdk', '${PDK_ROOT}', '${PDK_ROOT}'],
+            ['COPY', '--from=gf180_pdk', '${PDK_ROOT}', '${PDK_ROOT}'],
+        ]
+        common_copy = expected_copies.index(
+            ['COPY', '--from=builder', '${TOOLS}/common', '${TOOLS}/common'])
+        expected_copies[common_copy][1] = '--from=openroad_dependencies'
         self.assertEqual(copies(after), expected_copies)
 
     def test_runtime_config_is_installed_once(self):

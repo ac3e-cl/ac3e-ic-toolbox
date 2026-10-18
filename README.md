@@ -116,6 +116,13 @@ make STAGE=ihp_pdk build
 CHECK_ONLY=1 ./build/build-image.sh
 ```
 
+Build output defaults to concise stage progress; full diagnostics are saved under
+`build/_build_logs/`. On failure, the last 40 log lines and the full log path are
+shown. Use `BUILD_VERBOSE=1 make build` for full compiler output, or set
+`BUILDKIT_PROGRESS=tty` for native interactive BuildKit output.
+See [build performance and diagnostics](docs/build-performance.md) for scheduling,
+cache behavior, and resource limits.
+
 ### Linux
 
 ### Compatible launch commands

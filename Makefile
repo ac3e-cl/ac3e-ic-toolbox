@@ -5,7 +5,7 @@ all: print
 print:
 	@./runtime/start.sh print
 build:
-	./runtime/start.sh build
+	@./runtime/start.sh build
 test:
 	./runtime/start.sh test
 xserver:

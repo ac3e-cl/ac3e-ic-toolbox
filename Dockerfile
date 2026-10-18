@@ -157,13 +157,32 @@ RUN --mount=type=bind,source=images/base,target=/images/base \
 
 
 #######################################################################
-# Builder image (Has all iic dependencies)
+# Shared native builder: no LLVM, Qt, MPI or OpenROAD source dependencies.
 #######################################################################
 FROM common AS builder
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    locales ca-certificates build-essential autoconf automake autotools-dev \
+    libtool pkg-config bison flex gawk git curl wget unzip zip patch autopoint gperf \
+    cmake ninja-build python3 python3-dev python3-pip python3-numpy \
+    tcl tcl-dev tk-dev libreadline-dev libffi-dev libpcre2-dev \
+    libx11-dev libxaw7-dev libxpm-dev libxrender-dev libxft-dev libglu1-mesa-dev \
+    libcairo2-dev libgtk-3-dev libgtk2.0-dev libfftw3-dev \
+    libsuitesparse-dev libedit-dev libfl-dev zlib1g-dev libbz2-dev \
+    liblzma-dev libgmp-dev libssl-dev gettext help2man texinfo time bc csh && \
+    sed -i -e "s/# $LC_ALL UTF-8/$LC_ALL UTF-8/" /etc/locale.gen && \
+    locale-gen && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 0 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Preserve the exhaustive system toolchain only for LLVM/Trilinos/OpenROAD.
+# The existing installer supplies their compiler and system-library requirements;
+# ordinary native tools must not wait for it or the source dependency builds.
+FROM builder AS heavyweight_builder
 RUN --mount=type=bind,source=images/builder,target=/images/builder \
     bash /images/builder/exhaustive-install.sh
 
+FROM heavyweight_builder AS openroad_dependencies
 # Initialize CMAKE_PACKAGE_ROOT_ARGS variable
 ENV CMAKE_PACKAGE_ROOT_ARGS=""
 ENV CMAKE_PACKAGE_ROOT_ARGS="$CMAKE_PACKAGE_ROOT_ARGS -D SWIG_ROOT=$TOOLS/common -D Eigen3_ROOT=$TOOLS/common -D GTest_ROOT=$TOOLS/common -D LEMON_ROOT=$TOOLS/common -D spdlog_ROOT=$TOOLS/common -D ortools_ROOT=$TOOLS/common"
@@ -212,29 +231,40 @@ RUN --mount=type=bind,source=images/magic,target=/images/magic \
 #######################################################################
 # Build PDKs from open_pdks
 #######################################################################
-FROM magic AS open_pdks
+FROM magic AS pdk_builder
 
 ARG OPEN_PDKS_REPO_URL \
     OPEN_PDKS_REPO_COMMIT \
     OPEN_PDKS_NAME
 
-RUN --mount=type=bind,source=images/base,target=/images/base \
-    bash /images/base/python_packages.sh
+RUN pip install --no-cache-dir volare==0.18.1
 
+FROM pdk_builder AS sky130_pdk
 RUN --mount=type=bind,source=images/pdks,target=/images/pdks \
     cd /images/pdks/ \
-    && bash install_sky130.sh \
-    && bash install_gf180mcu.sh
-
+    && bash install_sky130.sh
 RUN --mount=type=bind,source=images/final_structure/configure,target=/images/final_structure/configure \
     cd /images/final_structure/configure/ \
-    && bash patch_pdk_sky130.sh \
+    && bash patch_pdk_sky130.sh
+
+FROM pdk_builder AS gf180_pdk
+RUN --mount=type=bind,source=images/pdks,target=/images/pdks \
+    cd /images/pdks/ \
+    && bash install_gf180mcu.sh
+RUN --mount=type=bind,source=images/final_structure/configure,target=/images/final_structure/configure \
+    cd /images/final_structure/configure/ \
     && bash patch_pdk_gf180mcu.sh
+
+# Compatibility target. Copy whole roots, preserving Volare backing directories
+# and the relative public symlinks (in particular GF180 D's private A backing).
+FROM pdk_builder AS open_pdks
+COPY --from=sky130_pdk ${PDK_ROOT} ${PDK_ROOT}
+COPY --from=gf180_pdk ${PDK_ROOT} ${PDK_ROOT}
 
 #######################################################################
 # Compile openvaf (requirement for ihp pdk)
 #######################################################################
-FROM builder AS openvaf
+FROM heavyweight_builder AS openvaf
 
 ARG OPENVAF_REPO_URL \
     OPENVAF_REPO_COMMIT \
@@ -288,7 +318,7 @@ RUN --mount=type=bind,source=images/gnucap,target=/images/gnucap \
 #######################################################################
 # Compile xyce
 #######################################################################
-FROM builder AS xyce
+FROM heavyweight_builder AS xyce
 
 ARG XYCE_REPO_URL \
     XYCE_REPO_COMMIT \
@@ -410,7 +440,7 @@ RUN --mount=type=bind,source=images/iverilog,target=/images/iverilog \
 #######################################################################
 # Compile OpenROAD (core application)
 #######################################################################
-FROM builder AS openroad_core
+FROM openroad_dependencies AS openroad_core
 
 ARG OPENROAD_REPO_URL \
     OPENROAD_REPO_COMMIT \
@@ -463,8 +493,8 @@ COPY --from=open_pdks  ${PDK_ROOT}                  ${PDK_ROOT}
 COPY --from=ihp_pdk    ${PDK_ROOT}/${IHP_PDK_NAME}  ${PDK_ROOT}/${IHP_PDK_NAME}
 COPY --from=ihp_pdk    ${PDK_ROOT}/versions.txt     ${PDK_ROOT}/versions.txt
 
-# Copy common libraries from builder, excluding compile-time only tools
-COPY --from=builder    ${TOOLS}/common              ${TOOLS}/common
+# Retain common shared libraries used by OpenROAD, not just its executable.
+COPY --from=openroad_dependencies ${TOOLS}/common   ${TOOLS}/common
 
 # Cleanup compile-time only tools from common (SWIG, GTest are only needed at build time)
 RUN rm -rf ${TOOLS}/common/bin/swig* ${TOOLS}/common/share/swig && \

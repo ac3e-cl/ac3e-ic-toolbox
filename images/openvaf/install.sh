@@ -28,7 +28,7 @@ index 13db6e5..dada68e 100644
      .expect("ucrt compilation succeeds");
 EOF
 
-    cargo build --release --bin openvaf
+    cargo build --jobs "${MAX_BUILD_JOBS:-2}" --release --bin openvaf
 
     mkdir -p  "/${TOOLS}/${OPENVAF_NAME}/${REPO_COMMIT_SHORT}/bin"
     cp target/release/openvaf "/${TOOLS}/${OPENVAF_NAME}/${REPO_COMMIT_SHORT}/bin"

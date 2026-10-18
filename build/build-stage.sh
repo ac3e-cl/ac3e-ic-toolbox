@@ -18,7 +18,8 @@ Environment overrides:
   MAX_BUILD_JOBS      Override the manifest compilation parallelism
   NO_CACHE            Use --no-cache when set to a truthy value
   CHECK_ONLY          Run Dockerfile build checks without building
-  BUILDKIT_PROGRESS   BuildKit progress mode (default: plain)
+  BUILDKIT_PROGRESS   BuildKit progress mode (default: plain; others stream fully)
+  BUILD_VERBOSE       Stream full Docker output when truthy (always logged)
 
 Any environment variable matching a manifest build argument overrides that
 argument for the current build.
@@ -108,8 +109,11 @@ else
 fi
 output_image="${BUILD_IMAGE_TAG:-${image_repository}:${docker_tag}-${docker_stage}}"
 
+source "$script_dir/buildkit-setup.sh"
+configure_buildkit
+
 build_command=(
-    docker build
+    "${BUILD_COMMAND[@]}"
     --progress "$progress_mode"
     --tag "$output_image"
     --target "$docker_stage"
@@ -156,7 +160,38 @@ if "$check_only"; then
 else
     printf 'Building Docker target %s as %s\n' "$docker_stage" "$output_image"
 fi
-"${build_command[@]}"
+log_dir="$repository_root/build/_build_logs"
+mkdir -p -- "$log_dir"
+build_log="$(mktemp "$log_dir/${docker_stage}.XXXXXXXX.log")"
+printf 'Build log: %s\n' "$build_log"
+verbose=false
+case "${BUILD_VERBOSE:-}" in
+    ""|0|false|FALSE|no|NO) ;;
+    *) verbose=true ;;
+esac
+# Explicit non-plain progress modes and checks retain their native diagnostics.
+if "$check_only" || [ "$progress_mode" != plain ]; then
+    verbose=true
+fi
+set +e
+"${build_command[@]}" 2>&1 | tee "$build_log" | awk -v verbose="$verbose" -f "$script_dir/build-progress.awk"
+pipeline_status=("${PIPESTATUS[@]}")
+set -e
+build_status="${pipeline_status[0]}"
+if [ "$build_status" -ne 0 ]; then
+    if ! "$verbose"; then
+        printf '\nBuild failed (exit %s); last 40 log lines:\n' "$build_status" >&2
+        tail -n 40 -- "$build_log" >&2
+    fi
+    printf 'Build log: %s\n' "$build_log" >&2
+    exit "$build_status"
+fi
+for output_status in "${pipeline_status[@]:1}"; do
+    if [ "$output_status" -ne 0 ]; then
+        printf 'Build output capture failed (exit %s). Build log: %s\n' "$output_status" "$build_log" >&2
+        exit "$output_status"
+    fi
+done
 if ! "$check_only"; then
     docker image inspect "$output_image" --format 'Built {{.RepoTags}} ({{.Size}} bytes)'
 fi
