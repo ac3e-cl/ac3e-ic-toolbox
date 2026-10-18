@@ -7,8 +7,10 @@ not sandboxed: they can access the container. Path checks constrain API paths,
 not EDA scripts' behavior. Never expose this service to untrusted clients.
 """
 import argparse
+import importlib.util
 import os
 import re
+import select
 import signal
 import subprocess
 import threading
@@ -21,10 +23,24 @@ RUN = ('config=$1; selected=$2; shift 2; source "$config" >&2 || exit $?; '
        'if [[ -n "$selected" ]]; then set_pdk "$selected" >&2 || exit $?; fi; exec "$@"')
 LOG_CAP = 8 * 1024 * 1024
 
-TOOLS = ('ngspice', 'Xyce', 'yosys', 'openroad', 'klayout', 'magic', 'librelane')
 
 
-class Backend:
+
+def _load_sibling(name):
+    # The launcher uses Python -I; do not add workspace directories to sys.path.
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(name + '.py'))
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+filesystem = _load_sibling('filesystem')
+eda = _load_sibling('eda')
+TOOLS = eda.TOOLS
+
+
+class Backend(filesystem.FilesystemMixin, eda.EDAMixin):
     def __init__(self, workspace='/foss/designs', config='/opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh', pdk_root='/opt/pdks'):
         self.workspace = Path(workspace).resolve(strict=True)
         self.config = Path(config).resolve(strict=True)
@@ -135,7 +151,45 @@ class Backend:
         return self._submit(['librelane', '--manual-pdk', '--pdk-root', str(self.pdk_root),
                              '--pdk', pdk, '--jobs', '2', '--run-tag', 'mcp', '--design-dir', '.', path], pdk, timeout)
 
-    def _submit(self, argv, pdk, timeout):
+    def run_command(self, argv: list[str], cwd: str = '', pdk: str = '', timeout: float = 300) -> dict:
+        """Execute arbitrary Linux argv inside the container, without shell expansion.
+
+        TRUSTED CLIENTS ONLY: full user permissions including mounted host volumes.
+        Empty cwd uses an isolated job directory; relative cwd is workspace-relative.
+        Logs/artifacts remain in output_dir even when cwd is customized.
+        """
+        return self._submit(argv, pdk, timeout, cwd=cwd or None)
+
+    def run_shell(self, script: str, cwd: str = '', pdk: str = '', timeout: float = 300) -> dict:
+        """Execute a trusted Bash program with pipelines, redirections and Linux utilities.
+
+        This is unrestricted execution, not a sandbox or an approval mechanism.
+        Noninteractive only; background descendants are killed when the job finishes.
+        """
+        if not isinstance(script, str) or not script.strip() or len(script) > 131072 or '\x00' in script:
+            raise ValueError('script must be nonempty, NUL-free and at most 128KiB characters')
+        return self._submit(['bash', '--noprofile', '--norc', '-o', 'pipefail', '-c', script],
+                            pdk, timeout, cwd=cwd or None)
+
+    def list_jobs(self, offset: int = 0, limit: int = 100) -> dict:
+        """List jobs in submission order for this session, including their working directories."""
+        self._page(offset, limit, 1000)
+        with self.lock:
+            keys = list(self.jobs)
+            entries = [self.job_status(key) for key in keys[offset:offset + limit]]
+            return {'jobs': entries, 'next_offset': offset + len(entries),
+                    'has_more': offset + len(entries) < len(keys)}
+
+    def _submit(self, argv, pdk, timeout, cwd=None):
+        if (not isinstance(argv, list) or not argv or not argv[0] or len(argv) > 4096
+                or any(not isinstance(arg, str) or '\x00' in arg for arg in argv)
+                or sum(len(arg.encode('utf-8')) + 1 for arg in argv) > 262144):
+            raise ValueError('argv must be a nonempty list of NUL-free strings, at most 4096 arguments/256KiB')
+        directory_cwd = None
+        if cwd is not None:
+            directory_cwd = self.filesystem_path(str(cwd)).resolve()
+            if not directory_cwd.is_dir():
+                raise ValueError('cwd must be an existing container directory')
         if not isinstance(timeout, (int, float)) or not 0 < timeout <= 86400:
             raise ValueError('timeout must be between 0 and 86400 seconds')
         if pdk:
@@ -152,6 +206,7 @@ class Backend:
             directory.mkdir(mode=0o700)
             job = {'job_id': job_id, 'state': 'queued', 'returncode': None,
                    'output_dir': str(directory), 'process': None, 'cancel': False,
+                   'cwd': str(directory_cwd or directory),
                    'error': None, 'log_truncated': False}
             self.jobs[job_id] = job
             self.executor.submit(self._execute, job, argv, pdk, timeout)
@@ -168,6 +223,7 @@ class Backend:
     def _execute(self, job, argv, pdk, timeout):
         process = None
         reader = None
+        stop_reader = threading.Event()
         try:
             environment = os.environ.copy()
             environment.pop('BASH_ENV', None)
@@ -182,7 +238,7 @@ class Backend:
                 process = subprocess.Popen(
                     ['env', '-u', 'BASH_ENV', 'bash', '--noprofile', '--norc', '-c',
                      RUN, 'ac3e-ic-toolbox-mcp', str(self.config), pdk, *argv],
-                    cwd=job['output_dir'], env=environment, stdin=subprocess.DEVNULL,
+                    cwd=job['cwd'], env=environment, stdin=subprocess.DEVNULL,
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
                 job['process'] = process
                 job['state'] = 'running'
@@ -191,8 +247,10 @@ class Backend:
                 written = 0
                 try:
                     with process.stdout, open(Path(job['output_dir']) / 'output.log', 'wb') as log:
-                        while True:
-                            chunk = process.stdout.read(8192)
+                        while not stop_reader.is_set():
+                            if not select.select([process.stdout], [], [], 0.1)[0]:
+                                continue
+                            chunk = os.read(process.stdout.fileno(), 8192)
                             if not chunk:
                                 break
                             remaining = max(0, LOG_CAP - written)
@@ -216,7 +274,13 @@ class Backend:
                 code = process.wait()
             # Kill descendants even when their leader exited normally.
             self._kill_group(process)
-            reader.join()
+            reader.join(timeout=1)
+            if reader.is_alive():
+                # A trusted command may detach into another session while retaining
+                # stdout. Such daemons are outside our process group, not resumable jobs.
+                job['log_truncated'] = True
+                stop_reader.set()
+                reader.join()
             with self.lock:
                 job['returncode'] = code
                 if reader_errors:
@@ -228,6 +292,7 @@ class Backend:
             if process is not None:
                 process.wait()
             if reader is not None:
+                stop_reader.set()
                 reader.join()
             with self.lock:
                 job['error'] = str(exc)
@@ -242,7 +307,7 @@ class Backend:
         """Inspect a job owned by this MCP session."""
         with self.lock:
             job = self._job(job_id)
-            return {key: job[key] for key in ('job_id', 'state', 'returncode', 'output_dir', 'error', 'log_truncated')}
+            return {key: job[key] for key in ('job_id', 'state', 'returncode', 'output_dir', 'cwd', 'error', 'log_truncated')}
 
     def cancel_job(self, job_id: str) -> dict:
         """Cancel the entire process group, including surviving children."""
@@ -332,10 +397,13 @@ def create_server(manager):
     server = FastMCP('ac3e-ic-toolbox EDA', instructions=(
         'Trusted local clients only. Scripts/config/netlists are executable, not sandboxed. '
         'Jobs are session-owned; disconnect cancels jobs; output files persist. '
-        'At most two jobs at once; script runners are not turnkey DRC/LVS.'))
+        'At most two jobs at once; script runners are not turnkey DRC/LVS. '
+        'Filesystem and Linux tools access the entire container with the server user permissions, '
+        'including mounted host volumes. Relative filesystem paths use the workspace.'))
     for name in ('environment_status', 'list_pdks', 'simulate_netlist', 'run_script',
                  'start_flow', 'job_status', 'job_logs', 'cancel_job',
-                 'list_artifacts', 'read_artifact'):
+                 'list_artifacts', 'read_artifact', 'run_command', 'run_shell', 'list_jobs',
+                 *filesystem.FILESYSTEM_METHODS, *eda.EDA_METHODS):
         server.tool(name=name)(getattr(manager, name))
     return server
 

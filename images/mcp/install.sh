@@ -8,6 +8,8 @@ install -d -m 755 "$prefix/bin"
 uv venv --python /usr/bin/python3 "$prefix/venv"
 uv pip install --python "$prefix/venv/bin/python" -r "$source_dir/requirements.txt"
 install -m 644 "$source_dir/server.py" "$prefix/server.py"
+install -m 644 "$source_dir/filesystem.py" "$prefix/filesystem.py"
+install -m 644 "$source_dir/eda.py" "$prefix/eda.py"
 install -m 644 "$source_dir/requirements.txt" "$prefix/requirements.txt"
 install -m 755 "$source_dir/ac3e-ic-toolbox-mcp" "$prefix/bin/ac3e-ic-toolbox-mcp"
 "$prefix/venv/bin/python" -I -c 'from mcp.server.fastmcp import FastMCP'

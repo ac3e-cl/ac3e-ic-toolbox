@@ -38,6 +38,38 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.backend.list_pdks(), ['sky130A'])
         self.assertRaises(ValueError, self.backend.validate_pdk, '../pdks')
 
+    def test_linux_argv_cwd_and_shell_are_explicit_jobs(self):
+        directory = self.workspace / 'a directory'
+        directory.mkdir()
+        job = self.backend.run_command(['printf', '%s', 'literal ; $(touch unwanted)'], cwd='a directory')
+        self.assertEqual(self.wait_job(job)['state'], 'succeeded')
+        self.assertIn('literal ; $(touch unwanted)', self.backend.job_logs(job['job_id'])['text'])
+        self.assertFalse((directory / 'unwanted').exists())
+        shell = self.backend.run_shell('printf hello > result; pwd', cwd=str(directory))
+        self.assertEqual(self.wait_job(shell)['state'], 'succeeded')
+        self.assertEqual((directory / 'result').read_text(), 'hello')
+        self.assertEqual(self.backend.job_status(shell['job_id'])['cwd'], str(directory))
+        self.assertTrue(self.backend.list_jobs()['jobs'])
+        for argv in ([], [''], ['printf', '\x00'], 'echo x'):
+            self.assertRaises(ValueError, self.backend.run_command, argv)
+        self.assertRaises(ValueError, self.backend.run_command, ['pwd'], cwd='missing')
+
+    def test_detached_stdout_holder_cannot_block_job_completion(self):
+        import os
+        import signal
+        directory = self.workspace
+        script = "setsid bash -c 'echo $$ > detached.pid; exec sleep 30' & while [[ ! -s detached.pid ]]; do sleep 0.01; done"
+        job = self.backend.run_command(['bash', '-c', script], cwd=str(directory))
+        try:
+            self.assertEqual(self.wait_job(job)['state'], 'succeeded')
+        finally:
+            pid_file = directory / 'detached.pid'
+            if pid_file.exists():
+                try:
+                    os.kill(int(pid_file.read_text()), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
     def wait_job(self, job):
         import time
         deadline = time.monotonic() + 8
@@ -94,6 +126,9 @@ class ServerTests(unittest.TestCase):
         import time
         from unittest.mock import mock_open, patch
         self.install_fake_tool('ngspice', 'sleep 30 &\necho $! > child.pid\nhead -c 1000000 /dev/zero\nwait\n')
+        # Trigger the injected write failure after the child PID is recorded,
+        # not while the runtime initializer is emitting its banner.
+        self.config.write_text(self.config.read_text().replace('echo config-noise\n', ''))
         (self.workspace / 'a.cir').write_text('x')
         for operation in ('write', 'flush'):
             with self.subTest(operation=operation):

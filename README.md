@@ -322,7 +322,8 @@ paths, and job state. Typical agent requests include:
 - Use `simulate_netlist` to run ngspice on a trusted workspace netlist and
   inspect the resulting logs and files.
 - Use `run_script` for trusted Magic Tcl, KLayout Python/Ruby, OpenROAD Tcl,
-  or Yosys scripts. Netgen is not exposed by this initial server.
+  or Yosys scripts. Use `tool_catalog` to discover the extended EDA interfaces,
+  and `run_tool` for native command-line options (including Netgen).
 - Use `start_flow` for a LibreLane design configuration, then poll `job_status`
   and retrieve the job's logs and artifacts through the corresponding tools.
 
@@ -330,6 +331,49 @@ These are execution and inspection primitives, **not a turnkey DRC/LVS
 service**. Technology decks, extraction/LVS setup, design inputs, and result
 interpretation remain the project's responsibility. Consult the discovered tool
 schemas for supported script types, arguments, and limits.
+
+### Extended EDA, filesystem and Linux interfaces
+
+`tool_catalog` documents the native tools, capabilities and argument examples.
+`run_tool(tool, arguments, pdk, timeout, cwd)` exposes their native CLI without
+shell interpolation, so advanced flags are not restricted to convenience wrappers.
+The catalog distinguishes executables from PDK resources and Python libraries;
+`environment_status` reports what is actually available in the running image.
+GUI applications still need a working display and are session-owned jobs, not
+persistent desktop services. The detailed interface is in [MCP tools](docs/mcp-tools.md).
+
+Container filesystem tools are `list_directory`, `stat_path`, `read_file`,
+`write_file`, `edit_file`, `make_directory`, `copy_path`, `move_path`,
+`remove_path`, and `search_files`. Relative paths use the workspace; absolute
+paths access the **entire container**, subject to the server user's permissions.
+These tools can also change host files exposed through mounts. Writes do not
+overwrite unless explicitly requested; deletion requires `confirm=true` (an API
+parameter, **not** an interactive user-approval mechanism). File reads support
+UTF-8 or base64 and byte pagination; writes/edits are limited to 1 MiB per call.
+
+`run_command(argv, cwd, pdk, timeout)` executes arbitrary Linux commands without
+shell expansion. `run_shell(script, cwd, pdk, timeout)` explicitly enables Bash
+pipelines, redirections and shell syntax. Both use the same asynchronous jobs,
+timeouts, logs, process-group cancellation and two-job limit as EDA calls.
+`list_jobs` lists jobs owned by the connection. Empty `cwd` preserves isolated
+job execution; a supplied directory enables in-place project workflows. With a
+custom `cwd`, generated files stay there, while `output.log` remains in the
+job's `output_dir`; inspect project files with filesystem tools.
+Cancellation and shutdown kill the job's original process group. Do not launch
+detached daemons (`setsid`, daemonizing services): they can escape that group and
+require separate cleanup. An inherited output pipe cannot hold the server open
+indefinitely; forced log-drain cutoff is reported as `log_truncated=true`.
+
+Examples of agent requests:
+
+> Show the tool catalog, inspect `rtl/`, then lint my Verilog without changing it.
+
+> Create a netlist in the workspace, simulate it, and read the numerical results.
+
+> Run `df -h` using `run_command`, then inspect the job log.
+
+> Search `project/` for `*.v`, copy the project to a new directory, and operate
+> only on the copy. Do not delete or overwrite existing files.
 
 The wrapper accepts `--workspace`, `--config`, and `--pdk-root` options. Paths
 refer to files/directories inside the container. Append overrides to the server
@@ -363,8 +407,10 @@ Example prompts after connecting:
 > Start the LibreLane flow from `counter/config.json` using `sky130A` with
 > a 7200-second timeout. Poll progress and report errors or final artifacts.
 
-Inputs must exist under the workspace; relative paths are workspace-relative.
-Jobs run in their output directories, not the input file's directory. Use
+Inputs to the original convenience runners must exist under the workspace;
+relative paths are workspace-relative. These runners execute in their output
+directories, not the input file's directory. `run_tool`, `run_command` and
+`run_shell` can select an explicit container `cwd`. Use
 absolute container paths for includes and design sources in scripts/netlists
 and LibreLane configurations. LibreLane uses the job directory as its
 `--design-dir` and writes beneath `runs/mcp`. `job_status` reports `queued`,

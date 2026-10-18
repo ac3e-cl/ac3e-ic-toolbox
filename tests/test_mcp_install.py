@@ -30,6 +30,11 @@ class MCPInstallTests(unittest.TestCase):
         self.assertIn('source=images/mcp,target=/images/mcp', dockerfile)
         self.assertIn('bash /images/mcp/install.sh', dockerfile)
 
+    def test_installer_copies_all_server_modules(self):
+        installer = (ROOT / 'images/mcp/install.sh').read_text()
+        for module in ('server', 'filesystem', 'eda'):
+            self.assertIn(f'"$source_dir/{module}.py" "$prefix/{module}.py"', installer)
+
 
 if __name__ == '__main__':
     unittest.main()
