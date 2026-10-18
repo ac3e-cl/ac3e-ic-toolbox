@@ -5,6 +5,20 @@ Inside the EDA container, run `bash /home/designer/tests/run_all.sh`, or run
 it does not call Docker or require the repository's `runtime/` directory.
 Run `bash /home/designer/tests/analog/netgen-lvs.sh` for one test.
 
+The complete GF, IHP and SKY template flows are long-running and excluded from
+the habitual suite. Opt in to only these long tests with:
+
+```bash
+bash /home/designer/tests/test_all_full.sh
+```
+
+The shared runner preserves timeouts and continues after failures. Long-suite
+logs and summary go to `run/full/`, separately from the habitual `run/` reports.
+`exclusions.json` lists this selection under `long_running`; hard exclusions
+under `tests` remain respected even in the long suite. Each template retains a
+14400-second deadline, overridable with `TEST_TIMEOUT`. SKY is classified by its
+full hardening/submission workload, not a measured runtime guarantee.
+
 Only `tests/` needs to mount at `/home/designer/tests` for the suite.
 The inventory check lists expected commands/resources directly; `manifest.json`
 is host build configuration and is not copied or mounted into the container.
@@ -17,7 +31,11 @@ The runner discovers shell tests in the five category directories, continues
 after failures, enforces a per-test deadline (`TEST_TIMEOUT`, default 900 seconds),
 and prints the final per-test summary. Missing programs and timeouts fail unless
 explicitly excluded. `exclusions.json` records user-authorized exclusions for
-the Xyce and ORFS tests and the Xyce/MCY inventory entries. Excluded tests are
+the Xyce and ORFS tests, the expensive GF/IHP/SKY template flows, and the
+Xyce/MCY inventory entries. Run
+`bash /home/designer/tests/pdk/librelane-template-gf.sh` manually for the complete
+GF180 template flow, including IR drop, RTL/gate-level simulation and GDS checks.
+Excluded tests are
 reported separately, never counted as passes. Remove the relevant entries to
 re-enable them. `helpers/` contains support code, not standalone tests.
 

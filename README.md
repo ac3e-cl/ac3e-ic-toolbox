@@ -47,6 +47,11 @@ This work is based on:
 
 The standard image includes **[LibreLane](https://github.com/librelane/librelane)**, an ASIC implementation flow based on OpenROAD, Yosys, Magic, and Netgen. LibreLane provides a complete RTL-to-GDSII flow with support for IHP-sg13g2, Sky130, and GF180MCU PDKs, powered by the Nix package manager. Its source revision is pinned in `manifest.json`.
 
+For the IHP, Tiny Tapeout SKY130 and wafer.space GF180 upstream templates, use
+the separately pinned Nix environments and private PDKs described in
+[LibreLane template workflows and tests](docs/librelane-templates.md).
+The global toolbox tools and analog PDKs remain available unchanged.
+
 We welcome contributions from the global IC design community!
 
 ---

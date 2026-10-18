@@ -8,6 +8,32 @@
     "namespace": "isaiash",
     "name": "ac3e-ic-toolbox"
   },
+  "librelaneTemplates": {
+    "sky": {
+      "url": "https://github.com/TinyTapeout/ttsky-verilog-template",
+      "commit": "a42e6662fab316e93b4e26399e21d41664a460b7",
+      "librelaneCommit": "f24e0ea5db2260719e9a0c7d51d07db74a87fa23",
+      "pdk": "sky130A",
+      "pdkCommit": "8afc8346a57fe1ab7934ba5a6056ea8b43078e71",
+      "supportToolsUrl": "https://github.com/TinyTapeout/tt-support-tools",
+      "supportToolsCommit": "01d5d2814fa9dd61e9d211e0b235a4a592a9316a",
+      "gdsActionCommit": "395eedb3eeec3c2f4961c3b04ff2cf87f5525636"
+    },
+    "ihp": {
+      "url": "https://github.com/IHP-GmbH/ihp-sg13-librelane-template",
+      "commit": "23c62045bb212175c20d8186a7ab308e15fba98c",
+      "librelaneCommit": "c5b5099e55f4e3bed507f2e79441ecfd6432d65c",
+      "pdk": "ihp-sg13g2",
+      "pdkCommit": "7bbb4b5a5b64c446fedc64eacadc33fa65ade276"
+    },
+    "gf": {
+      "url": "https://github.com/wafer-space/gf180mcu-project-template",
+      "commit": "33e4b5ecc9faac82787fa7cb205f08377e27b912",
+      "librelaneCommit": "df37e133fc3426c16e8356b1f50a17f8d6082f60",
+      "pdk": "gf180mcuD",
+      "pdkCommit": "f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+    }
+  },
   "build": {
     "target": "ac3e-ic-toolbox",
     "arguments": {

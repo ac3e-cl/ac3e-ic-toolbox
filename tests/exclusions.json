@@ -3,6 +3,11 @@
     "analog/xyce-dc.sh": "Excluded by user: Xyce is not included in the current final image.",
     "digital/test-orfs.sh": "Excluded by user: installed ORFS is incompatible with Yosys 0.44."
   },
+  "long_running": {
+    "pdk/librelane-template-gf.sh": "Long GF180 full-chip flow including IR drop; opt in with test_all_full.sh.",
+    "pdk/librelane-template-ihp.sh": "Long IHP full-chip flow and physical checks; opt in with test_all_full.sh.",
+    "pdk/librelane-template-sky.sh": "Long SKY hardening, submission and gate-level flow; opt in with test_all_full.sh."
+  },
   "manifest": {
     "XYCE_NAME": "Excluded by user: Xyce is not included in the current final image.",
     "YOSYS_MCY_NAME": "Excluded by user: MCY installation is disabled."

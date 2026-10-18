@@ -601,6 +601,16 @@ RUN cd /opt/librelane && \
 RUN source ~/.nix-profile/etc/profile.d/nix.sh && \
     librelane --version
 
+# Preserve each upstream template's Nix lock and PDK independently of /opt/pdks.
+USER root
+RUN mkdir -p /opt/librelane-templates && chown designer:designer /opt/librelane-templates
+COPY --chmod=755 images/librelane/librelane-template /usr/local/bin/librelane-template
+USER designer
+ARG MAX_BUILD_JOBS
+RUN --mount=type=bind,source=images/librelane,target=/images/librelane \
+    --mount=type=bind,source=manifest.json,target=/images/manifest.json \
+    bash /images/librelane/install.sh /images/manifest.json
+
 # Note: yosys is already installed via the yosys stage, skip Nix installation to avoid rate limits
 # RUN source ~/.nix-profile/etc/profile.d/nix.sh && \
 #     nix profile install nixpkgs#yosys --extra-experimental-features "nix-command flakes"

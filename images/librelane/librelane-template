@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Run a template's recorded Nix shell, not the global toolbox profile.
+set -euo pipefail
+root="${LIBRELANE_TEMPLATES_ROOT:-/opt/librelane-templates}"
+usage() {
+    echo 'Usage: librelane-template {init|run} {ihp|sky|gf} DIRECTORY [COMMAND [ARG...]]' >&2
+    exit 2
+}
+[[ $# -ge 3 ]] || usage
+operation=$1
+key=$2
+project=$3
+shift 3
+case "$key" in
+    ihp) pdk=ihp-sg13g2 ;;
+    sky) pdk=sky130A ;;
+    gf) pdk=gf180mcuD ;;
+    *) usage ;;
+esac
+case "$operation" in
+    init)
+        [[ $# == 0 && ! -e "$project" ]] || usage
+        mkdir -p -- "$(dirname -- "$project")"
+        cp -a -- "$root/src/$key/." "$project"
+        ;;
+    run)
+        [[ -d "$project" ]] || { echo "Missing project: $project" >&2; exit 1; }
+        [[ -r "$root/activate/$key.sh" ]] || { echo "Missing Nix activation: $root/activate/$key.sh" >&2; exit 1; }
+        [[ $# -gt 0 ]] || set -- bash --noprofile --norc
+        lock="$root/src/$key/flake.lock"
+        [[ "$key" != sky ]] || lock="$root/sky/flake.lock"
+        cd -- "$project"
+        # No BASH_ENV/designinit, global Python or global PDK settings cross this boundary.
+        exec env -i HOME="$HOME" USER="${USER:-designer}" PATH=/usr/bin:/bin \
+            /bin/bash --noprofile --norc -c \
+            'set -e; source "$1"; eval "${shellHook:-}"; export PDK_ROOT="$2" PDK="$3" LIBRELANE_TEMPLATE_LOCK="$4"; shift 4; exec "$@"' \
+            template-shell "$root/activate/$key.sh" "$root/pdks/$key" "$pdk" "$lock" "$@"
+        ;;
+    *) usage ;;
+esac
