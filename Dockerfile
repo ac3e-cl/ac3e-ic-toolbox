@@ -8,6 +8,11 @@ ARG NGSPICE_REPO_URL
 ARG NGSPICE_REPO_COMMIT
 ARG NGSPICE_NAME
 
+# GNUCAP: 20260729-dev
+ARG GNUCAP_REPO_URL
+ARG GNUCAP_REPO_COMMIT
+ARG GNUCAP_NAME
+
 # Xyce
 ARG XYCE_REPO_URL
 ARG XYCE_REPO_COMMIT
@@ -268,6 +273,19 @@ RUN --mount=type=bind,source=images/ngspice,target=/images/ngspice \
     bash /images/ngspice/install.sh
 
 #######################################################################
+# Compile GNUCAP (official standalone build, no heavyweight builder dependencies)
+#######################################################################
+FROM common AS gnucap
+ARG GNUCAP_REPO_URL \
+    GNUCAP_REPO_COMMIT \
+    GNUCAP_NAME
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates git build-essential libreadline-dev && \
+    rm -rf /var/lib/apt/lists/*
+RUN --mount=type=bind,source=images/gnucap,target=/images/gnucap \
+    bash /images/gnucap/install.sh
+
+#######################################################################
 # Compile xyce
 #######################################################################
 FROM builder AS xyce
@@ -455,6 +473,7 @@ RUN rm -rf ${TOOLS}/common/bin/swig* ${TOOLS}/common/share/swig && \
     find ${TOOLS}/common -type d -name "*gtest*" -exec rm -rf {} + 2>/dev/null || true
 COPY --from=ihp_pdk    ${TOOLS}/openvaf             ${TOOLS}/openvaf
 COPY --from=ngspice    ${TOOLS}/ngspice             ${TOOLS}/ngspice
+COPY --from=gnucap     ${TOOLS}/gnucap              ${TOOLS}/gnucap
 COPY --from=xschem     ${TOOLS}/xschem               ${TOOLS}/xschem
 COPY --from=magic      ${TOOLS}/magic               ${TOOLS}/magic
 COPY --from=netgen     ${TOOLS}/netgen              ${TOOLS}/netgen

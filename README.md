@@ -416,6 +416,7 @@ EDA integration tests separately before treating the integration as released.
 | **librelane** | Complete RTL-to-GDSII ASIC implementation flow     | Nix    |
 | openroad     | Physical design platform; standalone and LibreLane environments | System / Nix |
 | ngspice      | SPICE analog and mixed-signal simulator             | System |
+| gnucap       | GNU Circuit Analysis Package (20260729-dev)         | System |
 | xschem       | Schematic Editor                                    | System |
 | magic        | Layout editor with DRC/Extraction capabilities      | System |
 | klayout      | Layout viewer and editor for GDS                    | System; LibreLane uses its Nix environment |
@@ -461,6 +462,14 @@ Selection updates `PDK`, `PDKPATH`, `STD_CELL_LIBRARY`,
 `SPICE_USERINIT_DIR` and `KLAYOUT_PATH`; GF D sets `GF_PDK_OPTION=D`.
 Unsupported PDKs (including GF C) fail without changing the previous selection.
 An optional second argument must name an installed standard-cell library.
+
+GNUCAP is built from the official Codeberg repository using its `INSTALL`
+instructions, with the `20260729-dev` snapshot pinned by SHA in `manifest.json`.
+Build it independently with `./build/build-stage.sh gnucap`. Inside the image,
+run `bash /home/designer/shared/tests/gnucap.sh` to verify a 10 V resistor divider
+produces 5 V. This standalone test lives in the shared workspace as requested;
+it is not discovered by `tests/run_all.sh`. No additional GNUCAP extensions or
+PDK model compatibility are implied by this smoke test.
 
 The IHP PDK Verilog-A models are compiled into OSDI binaries during the image build (`ihp_pdk` stage). The canonical location is `libs.tech/ngspice/osdi/`; a compatibility symlink at `libs.tech/ngspice/openvaf/` points to the same files for older schematics that reference the legacy path.
 

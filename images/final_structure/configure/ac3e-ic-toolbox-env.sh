@@ -25,7 +25,7 @@ _ac3e_setup() {
         done
         export PATH="$clean"
     fi
-    for tool in cvc_rv gaw3-xschem iverilog magic netgen ngspice openvaf verilator xschem yosys openroad; do
+    for tool in cvc_rv gaw3-xschem gnucap iverilog magic netgen ngspice openvaf verilator xschem yosys openroad; do
         for directory in "$TOOLS/$tool"/*/bin; do
             [[ ! -d "$directory" ]] || _ac3e_path_add PATH "$directory"
         done
