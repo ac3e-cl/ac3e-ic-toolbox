@@ -2,32 +2,40 @@
 
 ### Connect with Hermes Agent
 
-Connect to an existing EDA container by its **container name**, not its image
-name or release tag. The container must include the bundled MCP server. No
+Connect to the `ac3e-ic-toolbox` container, whose name matches `image.name` in
+`manifest.json`, not an image reference or release tag. It must include the bundled MCP server. No
 ports, HTTP service, or additional host Python environment are needed.
 
-1. Find your running container with `docker ps --format '{{.Names}}'`.
-   If you have not started one, run this from the repository root in a separate
+1. If the toolbox is not running, run this from the repository root in a separate
    terminal and leave its shell running:
 
    ```bash
-   CONTAINER_NAME=eda-workbench make start-raw
+   make start-raw
    ```
 
    The launcher uses your repository configuration; no image tag is needed in
-   the MCP setup.
+   the MCP setup. `make start` also works and reuses `ac3e-ic-toolbox`: a stopped
+   container resumes, and the same running version opens another shell. A version
+   or image update requires interactive confirmation before replacement (default:
+   **No**). Images download only when missing locally or after a confirmed registry
+   update. Replacement loses the internal writable layer, but retains designs in
+   the host-mounted directory (`shared/` by default).
 
-2. In a host terminal, set the container name and register the server:
+   A container created with `make start-raw` has no X11 mounts. Remove it
+   explicitly with `make rm` before switching to `make start`; a container
+   created with `make start` can also serve raw shells. Switching to VNC or
+   notebook mode likewise requires explicit recreation.
+
+2. In a host terminal, register the server:
 
    ```bash
-   container=eda-workbench  # Replace with your running container's name.
-   hermes mcp add ac3e-ic-toolbox --command docker --args exec -i "$container" /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
+   hermes mcp add ac3e-ic-toolbox --command docker --args exec -i ac3e-ic-toolbox /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
    hermes mcp test ac3e-ic-toolbox
    ```
 
 3. Start a new Hermes session and ask:
 
-   > Inspect the EDA environment and list installed PDKs. Do not start a job yet.
+   > Inspect the toolbox and list installed PDKs. Do not start a job yet.
 
 Hermes discovers tools with the `mcp_ac3e_ic_toolbox_` prefix. Registration stores
 the container name, so the connection does not depend on the image tag. Keep
@@ -38,7 +46,7 @@ If connection fails, check that Docker is accessible to Hermes, the container
 is running, and the server is installed:
 
 ```bash
-docker exec -i "$container" /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp --help
+docker exec -i ac3e-ic-toolbox /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp --help
 ```
 
 If the command is missing, use an MCP-enabled image or rebuild with `make
@@ -51,11 +59,11 @@ server being present, not a particular release number.
 Use the same stdio command with any MCP client:
 
 ```bash
-docker exec -i "$container" /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
+docker exec -i ac3e-ic-toolbox /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
 ```
 
 Set the client's executable to `docker` and its arguments to `exec`, `-i`,
-your container name, and `/opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp`. The client
+`ac3e-ic-toolbox`, and `/opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp`. The client
 launches this command; you do not need to run a separate MCP service.
 The launcher uses `/opt/ac3e-ic-toolbox/mcp` by default;
 `AC3E_IC_TOOLBOX_MCP_HOME` overrides that installation home inside the container.
@@ -138,7 +146,7 @@ refer to files/directories inside the container. Append overrides to the server
 command in your client configuration, for example:
 
 ```bash
-docker exec -i "$container" /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp --workspace /foss/designs
+docker exec -i ac3e-ic-toolbox /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp --workspace /foss/designs
 ```
 
 Use `--help` and the server configuration/schema for the available policy
@@ -202,9 +210,9 @@ MCP requirements rather than modifying the host's system Python:
 # From the repository root:
 python3 -m venv "$HOME/.cache/ac3e-ic-toolbox-mcp-venv"
 "$HOME/.cache/ac3e-ic-toolbox-mcp-venv/bin/python" -m pip install -r images/mcp/requirements.txt
-# Opt-in live test: eda-workbench must already be running the rebuilt image.
+# Opt-in live test: ac3e-ic-toolbox must already be running the rebuilt image.
 # MCP_TEST_WORKSPACE is the HOST directory mounted as /foss/designs.
-export MCP_TEST_COMMAND='["docker","exec","-i","eda-workbench","/opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp"]'
+export MCP_TEST_COMMAND='["docker","exec","-i","ac3e-ic-toolbox","/opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp"]'
 export MCP_TEST_WORKSPACE="$PWD/shared"
 "$HOME/.cache/ac3e-ic-toolbox-mcp-venv/bin/python" -m unittest discover -s tests -p 'test_mcp_protocol.py' -v
 unset MCP_TEST_COMMAND MCP_TEST_WORKSPACE

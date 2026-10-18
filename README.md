@@ -23,66 +23,42 @@ curl -fsSL https://raw.githubusercontent.com/ac3e-cl/ac3e-ic-toolbox/main/quicks
 
 The script clones the latest `main` into `./ac3e-ic-toolbox` and runs
 `make start`, using the published image version selected by that checkout.
-Docker downloads the image only when it is absent locally; the first download
-can be large. No toolchain compilation or local image build is needed.
+Docker downloads the image only when it is absent locally or you confirm a
+registry update; the first download can be large. No local build is needed.
 An existing destination is never overwritten. To choose another directory, use
-the same pipeline ending with `bash -s -- "$HOME/eda-tools"`.
+the same pipeline ending with `bash -s -- "$HOME/ac3e-ic-toolbox"`.
 
 For later sessions, run `cd ac3e-ic-toolbox && make start`.
-Designs persist in `shared/`. `make start` resumes the existing stopped container
-when its image reference and design directory match; `make attach` also resumes it.
-The shell, VNC, and Jupyter launchers likewise reuse their stopped containers.
-Reused containers keep their original configuration and command: to apply changed
-ports, environment, image contents, or other creation options, remove the stopped
-container explicitly before launching again (`make rm` for the default X container).
-If the container is already running, the launcher prints a `docker exec` command
-to open another shell without stopping or recreating it.
+The container is named `ac3e-ic-toolbox`, matching `image.name` in `manifest.json`.
+`make start` reuses it: a stopped container resumes, and the same running version
+opens another shell. A version or image update requires interactive confirmation
+before replacement (default: **No**). Replacement loses the container's internal
+writable layer; designs in the host-mounted directory (`shared/` by default) remain.
 For a terminal without an X server, clone the repository and use `make start-raw`.
 The bootstrap URL becomes available when this change is merged into `main`.
 
 ### Connect your AI client through MCP
 
-The bundled MCP server lets a local AI client inspect tools/PDKs, run EDA jobs,
-and work with container files. From the checkout, start a named container in a
-separate terminal and leave its shell running (no X server needed):
+The bundled MCP server lets a local AI client inspect tools/PDKs, run jobs, and
+work with files. Keep `make start` running, or use `make start-raw` without X.
+In a host terminal, register **one** client:
 
-```bash
-CONTAINER_NAME=eda-workbench make start-raw
-```
-
-In your host terminal, register it with **one** of the following clients:
-
-```bash
-# Claude Code
-claude mcp add --transport stdio ac3e-ic-toolbox -- docker exec -i eda-workbench /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
-
-# Codex
-codex mcp add ac3e-ic-toolbox -- docker exec -i eda-workbench /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
-
-# Cursor (desktop CLI)
-cursor --add-mcp '{"name":"ac3e-ic-toolbox","command":"docker","args":["exec","-i","eda-workbench","/opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp"]}'
-
-# Hermes Agent (--args must be last)
-hermes mcp add ac3e-ic-toolbox --command docker --args exec -i eda-workbench /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
-
-# OpenCode: choose a local server, name it ac3e-ic-toolbox,
-# and enter the universal command below when prompted.
-opencode mcp add
-```
+| Client | Command |
+| --- | --- |
+| Claude Code | `claude mcp add --transport stdio ac3e-ic-toolbox -- docker exec -i ac3e-ic-toolbox /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp` |
+| Codex | `codex mcp add ac3e-ic-toolbox -- docker exec -i ac3e-ic-toolbox /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp` |
+| Cursor | `cursor --add-mcp '{"name":"ac3e-ic-toolbox","command":"docker","args":["exec","-i","ac3e-ic-toolbox","/opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp"]}'` |
+| Hermes | `hermes mcp add ac3e-ic-toolbox --command docker --args exec -i ac3e-ic-toolbox /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp` |
+| OpenCode | `opencode mcp add` (interactive wizard: choose local, name it `ac3e-ic-toolbox`, paste the command below) |
 
 For OpenCode or **any client supporting local MCP stdio**, use this server command:
 
 ```bash
-docker exec -i eda-workbench /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
+docker exec -i ac3e-ic-toolbox /opt/ac3e-ic-toolbox/mcp/bin/ac3e-ic-toolbox-mcp
 ```
 
-If the client separates executable and arguments, select `docker` as the
-executable and pass the remaining words as individual arguments. Use `-i`, not
-`-t`; no HTTP endpoint or published ports are required. To use an already-running
-container, replace `eda-workbench` throughout with its name from `docker ps`.
-Reload your client's MCP connections or start a new session, then ask:
-
-> Inspect the EDA environment and list installed PDKs. Do not start a job yet.
+Use `-i`, not `-t`; no HTTP endpoint or published ports are required.
+Reload MCP connections or start a new client session.
 
 **Trusted agents only:** execution and filesystem tools can modify mounted host
 files; Docker access is privileged. Configure client approvals before use.
@@ -133,7 +109,7 @@ No local configuration is required. The manifest defaults to
 
 ```bash
 # Optional .env contents (replace with your absolute host path):
-SHARED_DIR=/home/your-user/eda/designs
+SHARED_DIR=/home/your-user/ac3e-ic-toolbox/designs
 PDK=ihp-sg13g2
 ```
 
@@ -160,7 +136,7 @@ image coordinates, final Docker target, and all source URLs and revisions passed
 to the Dockerfile. Values in `.env` are optional workstation overrides.
 
 The final `ac3e-ic-toolbox` Docker stage is the standard image and includes
-Nix/LibreLane. `ac3e-ic-toolbox-base` is its intermediate EDA assembly stage,
+Nix/LibreLane. `ac3e-ic-toolbox-base` is its intermediate tool assembly stage,
 not a separate standard runtime variant. Current build commands are:
 
 ```bash
@@ -203,7 +179,7 @@ permits traversal, not listing or writing, for other users. Direct `docker run
 --user` calls must provide equivalent HOME configuration; use the launchers.
 
 ```bash
-DESIGNS="$HOME/eda/designs" PDK=gf180mcuD ./start_shell.sh
+DESIGNS="$HOME/ac3e-ic-toolbox/designs" PDK=gf180mcuD ./start_shell.sh
 DRY_RUN=1 ./start_vnc.sh       # Inspect command without Docker/mkdir side effects
 ENABLE_GUI=1 BUILD_IMAGE_TAG=ac3e-ic-toolbox:gui ./build/build-image.sh
 ```
@@ -352,7 +328,7 @@ shell behavior. Existing containers must be recreated to use the updated image.
 - Complete RTL-to-GDSII automated flow
 - Multi-PDK support (IHP-sg13g2, Sky130A, GF180MCU)
 - Design exploration and optimization
-- Integration with industry-standard EDA tools
+- Integration with industry-standard IC design tools
 
 **Quick start with LibreLane:**
 ```bash
@@ -397,7 +373,7 @@ manifest and pass its values to the otherwise static Dockerfile.
 
 ## Testing
 
-`tests/run_all.sh` is the only suite runner. It runs directly inside the EDA
+`tests/run_all.sh` is the only suite runner. It runs directly inside the toolbox
 container without requiring the repository's `runtime/` directory or Docker
 commands. The tests mount separately from the user workspace:
 
@@ -422,7 +398,7 @@ the gitignored `tests/run/`.
 
 The suite also verifies the three PDK environments, a GF180MCU MOSFET operating
 point, GF KLayout technology/PCells and an explicit GF LibreLane counter flow
-with final metrics and GDS checks. Host runtime contracts run without EDA tools:
+with final metrics and GDS checks. Host runtime contracts run without design tools:
 
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py' -v

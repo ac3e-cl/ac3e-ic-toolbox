@@ -101,8 +101,10 @@ class Launchers(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
             path = Path(tmp)
             name = 'launcher-regression'
-            state = [{'Config': {'Image': f'isaiash/ac3e-ic-toolbox:{VERSION}' if compatible else 'other:image'},
-                      'Mounts': [{'Source': tmp, 'Destination': '/home/designer/shared'}],
+            state = [{'Config': {'Image': f'isaiash/ac3e-ic-toolbox:{VERSION}' if compatible else 'other:image',
+                                 'Env': ['DISPLAY=:0']},
+                      'Mounts': [{'Source': tmp, 'Destination': '/home/designer/shared'},
+                                 {'Source': '/tmp/.X11-unix', 'Destination': '/tmp/.X11-unix'}],
                       'State': {'Running': running}}]
             (path / 'state.json').write_text(json.dumps(state))
             docker = path / 'docker'
@@ -132,14 +134,13 @@ class Launchers(unittest.TestCase):
     def test_start_refuses_incompatible_stopped_container(self):
         result, calls = self.existing_container(compatible=False)
         self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertIn('Container exists', result.stderr)
+        self.assertIn('confirm replacement', result.stderr)
         self.assertEqual(calls[-1], ['container', 'inspect', 'launcher-regression'])
 
-    def test_start_running_container_reports_exec_without_recreating(self):
+    def test_start_running_container_executes_shell_without_recreating(self):
         result, calls = self.existing_container(running=True)
-        self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertIn('docker exec -it launcher-regression /bin/bash', result.stderr)
-        self.assertEqual(calls[-1], ['container', 'inspect', 'launcher-regression'])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls[-1], ['exec', '-it', 'launcher-regression', '/bin/bash'])
 
     def test_docker_failure_status_is_propagated(self):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:

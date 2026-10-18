@@ -76,11 +76,15 @@ uid=${CONTAINER_USER:-${USER_ID:-$(id -u)}}
 gid=${CONTAINER_GROUP:-${USER_GROUP:-$(id -g)}}
 [[ -z ${ROOT:-} ]] || { uid=0; gid=0; }
 [[ $uid =~ ^[0-9]+$ && $gid =~ ^[0-9]+$ ]] || { echo 'UID/GID must be numeric' >&2; exit 2; }
-identity_mode=$mode
-case $mode in attach|rm|print) identity_mode=x;; esac
-name=${CONTAINER_NAME:-ac3e-ic-toolbox_${identity_mode}_uid_${uid}}
+project=$(jq -r .image.name "$root/manifest.json")
+name=${CONTAINER_NAME:-$project}
+# Integration runs are disposable and must never replace the user's container.
+[[ $mode != test ]] || name=${CONTAINER_NAME:-$project-test-$$}
 
-argv=(docker run --name "$name" --user "$uid:$gid" --mount "type=bind,source=$designs,target=/home/designer/shared" --mount "type=bind,source=$root/tests,target=/home/designer/tests" --env SHELL=/bin/bash --env "PDK=${PDK:-ihp-sg13g2}")
+argv=(docker run --pull=never --name "$name" --user "$uid:$gid" --mount "type=bind,source=$designs,target=/home/designer/shared" --mount "type=bind,source=$root/tests,target=/home/designer/tests" --env SHELL=/bin/bash --env "PDK=${PDK:-ihp-sg13g2}")
+session_mode=$mode
+[[ $mode != attach ]] || session_mode=x
+argv+=(--label "org.ac3e.ic-toolbox.mode=$session_mode")
 for setting in STD_CELL_LIBRARY VNC_PW VNC_RESOLUTION TEST_TIMEOUT; do
     [[ ! -v $setting ]] || argv+=(--env "$setting=${!setting}")
 done
@@ -148,22 +152,83 @@ if [[ $mode == pull ]]; then
     exec "${argv[@]}"
 fi
 if [[ $mode == build || $mode == push || $mode == rm || $mode == devcontainer ]]; then exec "${argv[@]}"; fi
-# Exact-name lookup, not substring filters. Never delete/recreate automatically.
+# Exact-name lookup. Replacements require consent and an available target image.
+image_ready=0
 existing=$(docker container ls -a --format '{{.Names}}')
 if printf '%s\n' "$existing" | python3 -c 'import sys; sys.exit(0 if sys.argv[1] in sys.stdin.read().splitlines() else 1)' "$name"; then
     state=$(docker container inspect "$name")
-    decision=$(python3 -c 'import json,sys; c=json.load(sys.stdin)[0]; mounts=c.get("Mounts",[]); ok=c["Config"]["Image"]==sys.argv[1] and any(m.get("Source")==sys.argv[2] and m.get("Destination")=="/home/designer/shared" for m in mounts); print("running" if c["State"]["Running"] else "same" if ok else "different")' "$reference" "$designs" <<< "$state")
-    if [[ $decision == running ]]; then
-        echo "Container is running; use: docker exec -it $name /bin/bash" >&2; exit 2
-    elif [[ $decision == different || $mode == test ]]; then
+    metadata=$(python3 -c 'import json,sys; c=json.load(sys.stdin)[0]; print(c["Config"]["Image"]); print(int(c["State"]["Running"])); print(int(any(m.get("Source")==sys.argv[1] and m.get("Destination")=="/home/designer/shared" for m in c.get("Mounts",[]))))' "$designs" <<< "$state")
+    mapfile -t fields <<< "$metadata"
+    current_reference=${fields[0]}
+    running=${fields[1]}
+    stored_mode=$(jq -r '.[0].Config.Labels["org.ac3e.ic-toolbox.mode"] // empty' <<< "$state")
+    if [[ -n $stored_mode && $stored_mode != "$session_mode" && $mode != attach && ! ( $session_mode == shell && $stored_mode == x ) ]]; then
+        printf 'Container %s uses %s mode; remove it explicitly before switching to %s.\n' "$name" "$stored_mode" "$session_mode" >&2
+        exit 2
+    fi
+    if [[ $mode == x && -z $stored_mode ]] && ! jq -e '.[0] | any(.Config.Env[]?; startswith("DISPLAY=") and . != "DISPLAY=") and any(.Mounts[]?; .Destination == "/tmp/.X11-unix")' <<< "$state" >/dev/null; then
+        echo 'Container lacks X11 configuration; explicitly remove it before using make start.' >&2
+        exit 2
+    fi
+    if [[ ${fields[2]} != 1 || $mode == test ]]; then
         echo 'Container exists with incompatible configuration or test mode; explicitly remove it to recreate.' >&2; exit 2
     fi
-    case $mode in
-        shell|x|attach) exec docker container start -ai "$name";;
-        vnc|jupyter) exec docker container start "$name";;
-    esac
+    replace=0
+    refresh=0
+    update_reason=
+    if [[ $current_reference != "$reference" ]]; then
+        update_reason="from $current_reference to $reference"
+    elif [[ -t 0 && -z ${NO_PULL:-} ]]; then
+        local_image=$(docker image inspect "$reference" 2>/dev/null || printf '[]')
+        local_id=$(jq -r '.[0].Id // empty' <<< "$local_image")
+        container_id=$(jq -r '.[0].Image // empty' <<< "$state")
+        if [[ -n $local_id && -n $container_id && $local_id != "$container_id" ]]; then
+            update_reason="to the locally installed image for $reference"
+        elif [[ $(jq '.[0].RepoDigests // [] | length' <<< "$local_image") -gt 0 ]]; then
+            # Metadata only; never download layers before the user agrees.
+            if remote_manifest=$(timeout 10 docker buildx imagetools inspect "$reference" --format '{{json .Manifest}}' 2>/dev/null); then
+                remote_digest=$(jq -r '.digest // empty' <<< "$remote_manifest")
+                if [[ -n $remote_digest ]] && ! jq -e --arg digest "$remote_digest" '.[0].RepoDigests // [] | any(endswith("@" + $digest))' <<< "$local_image" >/dev/null; then
+                    update_reason="to the published update for $reference"
+                    refresh=1
+                fi
+            else
+                echo 'Update check unavailable; keeping the installed image.' >&2
+            fi
+        fi
+    fi
+    if [[ -n $update_reason ]]; then
+        if [[ ! -t 0 ]]; then
+            printf 'Container %s uses %s; requested %s. Run interactively to confirm replacement.\n' "$name" "$current_reference" "$reference" >&2
+            exit 2
+        fi
+        printf 'Update %s %s?\nThis removes its internal files and stops its processes; mounted designs are preserved. [y/N]: ' "$name" "$update_reason" >&2
+        IFS= read -r answer || answer=
+        case $answer in y|Y|yes|YES) replace=1;; *) echo 'Container kept unchanged.' >&2; exit 0;; esac
+    fi
+    if (( replace )); then
+        # Pull before stopping/removing anything: failure leaves the old session intact.
+        if (( refresh )) || ! docker image inspect "$reference" >/dev/null 2>&1; then
+            [[ -z ${NO_PULL:-} ]] || { echo 'Requested image is missing and NO_PULL is set.' >&2; exit 2; }
+            docker image pull "$reference"
+        fi
+        image_ready=1
+        if [[ $running == 1 ]]; then docker container stop "$name"; fi
+        docker container rm "$name"
+    else
+        if [[ $running == 1 ]]; then
+            case $mode in
+                shell|x|attach) if (( $# )); then exec docker exec -it "$name" "$@"; else exec docker exec -it "$name" /bin/bash; fi;;
+                vnc|jupyter) printf 'Container %s is already running.\n' "$name"; exit 0;;
+            esac
+        fi
+        case $mode in
+            shell|x|attach) exec docker container start -ai "$name";;
+            vnc|jupyter) exec docker container start "$name";;
+        esac
+    fi
 fi
-if [[ -z ${NO_PULL:-} ]] && ! docker image inspect "$reference" >/dev/null 2>&1; then
+if [[ $image_ready == 0 && -z ${NO_PULL:-} ]] && ! docker image inspect "$reference" >/dev/null 2>&1; then
     docker image pull "$reference"
 fi
 mkdir -p -- "$designs"
