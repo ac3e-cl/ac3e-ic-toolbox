@@ -20,6 +20,9 @@ Environment overrides:
   CHECK_ONLY          Run Dockerfile build checks without building
   BUILDKIT_PROGRESS   BuildKit progress mode (default: plain; others stream fully)
   BUILD_VERBOSE       Stream full Docker output when truthy (always logged)
+  BUILD_OUTPUT        local (default) or registry (push without local load)
+  BUILD_METADATA_FILE Required Buildx metadata path for registry output
+  BUILD_BUILDER       Explicit dedicated builder required for registry output
 
 Any environment variable matching a manifest build argument overrides that
 argument for the current build.
@@ -193,5 +196,11 @@ for output_status in "${pipeline_status[@]:1}"; do
     fi
 done
 if ! "$check_only"; then
-    docker image inspect "$output_image" --format 'Built {{.RepoTags}} ({{.Size}} bytes)'
+    if [[ ${BUILD_OUTPUT:-local} == registry ]]; then
+        digest=$(jq -er '."containerimage.digest" | select(type == "string") |
+            select(test("^sha256:[0-9a-f]{64}$"))' "$BUILD_METADATA_FILE")
+        printf 'Pushed %s (%s)\n' "$output_image" "$digest"
+    else
+        docker image inspect "$output_image" --format 'Built {{.RepoTags}} ({{.Size}} bytes)'
+    fi
 fi

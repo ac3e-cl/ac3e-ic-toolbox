@@ -36,6 +36,12 @@ class BuildOutputTests(unittest.TestCase):
         docker = self.root / 'docker'
         docker.write_text('''#!/usr/bin/env bash
 if [[ "$1" == image ]]; then echo inspected; exit "${INSPECT_STATUS:-0}"; fi
+if [[ "$1 $2" == 'buildx inspect' ]]; then
+    printf 'Driver: docker-container\\n > max-parallelism = 2\\n'; exit 0
+fi
+if [[ -n "${BUILD_METADATA_FILE:-}" && "${WRITE_METADATA:-1}" == 1 ]]; then
+    printf '{"containerimage.digest":"%s"}\\n' "${DIGEST:-sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}" > "$BUILD_METADATA_FILE"
+fi
 printf '%s\\n' "$*" > "$ARGS_FILE"
 printf '#1 [final 1/1] RUN compile\\n' >&2
 for ((i=0;i<150;i++)); do printf '#1 0.1 compiler-spam-%s\\n' "$i"; done
@@ -47,7 +53,8 @@ exit "${STATUS:-0}"
     def run_build(self, **overrides):
         env = os.environ.copy()
         for key in ('CHECK_ONLY', 'BUILD_VERBOSE', 'BUILDKIT_PROGRESS', 'STATUS',
-                    'BUILD_MAX_PARALLELISM', 'BUILD_BUILDER'):
+                    'BUILD_MAX_PARALLELISM', 'BUILD_BUILDER', 'BUILD_OUTPUT',
+                    'BUILD_METADATA_FILE'):
             env.pop(key, None)
         env.update(PATH=str(self.root) + os.pathsep + env['PATH'],
                    ARGS_FILE=str(self.root / 'args'))
@@ -59,6 +66,23 @@ exit "${STATUS:-0}"
         output = result.stdout + result.stderr
         line = next(line for line in output.splitlines() if line.startswith('Build log: '))
         return Path(line.removeprefix('Build log: '))
+
+    def test_registry_build_uses_metadata_not_local_inspection(self):
+        result = self.run_build(BUILD_OUTPUT='registry', BUILD_BUILDER='ci',
+                                BUILD_METADATA_FILE=str(self.root / 'metadata.json'))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn('inspected', result.stdout)
+        args = (self.root / 'args').read_text()
+        self.assertNotIn('--load', args)
+        self.assertIn('type=registry', args)
+
+    def test_registry_rejects_missing_or_invalid_digest(self):
+        for settings in ({'WRITE_METADATA': '0'}, {'DIGEST': 'invalid'}):
+            with self.subTest(settings=settings):
+                result = self.run_build(BUILD_OUTPUT='registry', BUILD_BUILDER='ci',
+                                        BUILD_METADATA_FILE=str(self.root / 'metadata.json'),
+                                        **settings)
+                self.assertNotEqual(result.returncode, 0)
 
     def test_failure_keeps_status_and_prints_bounded_tail(self):
         result = self.run_build(STATUS='23')

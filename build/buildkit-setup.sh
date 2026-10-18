@@ -2,6 +2,16 @@
 # Source this helper, then call configure_buildkit before invoking BUILD_COMMAND.
 configure_buildkit() {
     BUILD_COMMAND=(docker build)
+    case ${BUILD_OUTPUT:-local} in
+        local) ;;
+        registry)
+            if [[ -z ${BUILD_BUILDER:-} || -z ${BUILD_METADATA_FILE:-} ]]; then
+                echo 'Registry output requires BUILD_BUILDER and BUILD_METADATA_FILE.' >&2
+                return 2
+            fi
+            ;;
+        *) echo 'BUILD_OUTPUT must be local or registry.' >&2; return 2 ;;
+    esac
     [[ -n ${BUILD_MAX_PARALLELISM:-}${BUILD_BUILDER:-} ]] || return 0
     local parallelism=${BUILD_MAX_PARALLELISM:-2}
     local builder=${BUILD_BUILDER:-ac3e-ic-toolbox-p${parallelism}}
@@ -35,4 +45,10 @@ configure_buildkit() {
         (( status == 0 )) || return "$status"
     fi
     BUILD_COMMAND=(docker buildx build --builder "$builder" --load)
+    if [[ ${BUILD_OUTPUT:-local} == registry ]]; then
+        # Stream compressed layers to the registry, never through Docker's loader.
+        BUILD_COMMAND=(docker buildx build --builder "$builder"
+            --output type=registry,compression=gzip,compression-level=1
+            --metadata-file "$BUILD_METADATA_FILE")
+    fi
 }

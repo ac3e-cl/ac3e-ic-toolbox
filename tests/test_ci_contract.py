@@ -32,10 +32,24 @@ class CIContract(unittest.TestCase):
         push = text.index('- name: Push release image')
         self.assertLess(checks, build)
         self.assertLess(build, integration)
-        self.assertLess(integration, login)
-        self.assertLess(login, push)
+        self.assertLess(login, build)
+        self.assertLess(integration, push)
+        self.assertIn('BUILD_OUTPUT: registry', text)
+        self.assertIn('BUILD_IMAGE_TAG: ${{ env.CANDIDATE_IMAGE }}', text)
+        self.assertIn('IMAGE: ${{ env.TEST_IMAGE }}', text)
+        self.assertNotIn('run: docker push', text)
+        self.assertIn('imagetools create --prefer-index=false', text)
         self.assertIn('CHECK_ONLY=1 ./build/build-image.sh', text)
         self.assertIn('environment: release-env', text)
+
+    def test_builder_is_bounded_and_removed_before_pull(self):
+        text = (ROOT / '.github/workflows/docker-release.yml').read_text()
+        for setting in ('memory=10g', 'memory-swap=12g', 'env.GOMEMLIMIT=6GiB',
+                        'env.GOGC=50', 'MAX_BUILD_JOBS: "2"'):
+            self.assertIn(setting, text)
+        self.assertLess(text.index('docker buildx rm'), text.index('docker pull'))
+        self.assertIn('build/_build_logs/*.log', text)
+        self.assertIn('build-metadata.json', text)
 
     def test_failure_logs_survive_until_upload(self):
         text = (ROOT / '.github/workflows/docker-release.yml').read_text()

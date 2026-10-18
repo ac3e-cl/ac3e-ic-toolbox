@@ -30,6 +30,28 @@ class BuildkitSetup(unittest.TestCase):
         self.assertEqual(result.stdout.splitlines(), ['docker', 'build'])
         self.assertEqual(calls, [])
 
+    def test_registry_output_never_loads_into_docker(self):
+        result, calls, _ = self.run_setup(
+            BUILD_OUTPUT='registry', BUILD_BUILDER='ci-builder',
+            BUILD_METADATA_FILE='/work/result.json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        args = result.stdout.splitlines()
+        self.assertNotIn('--load', args)
+        self.assertIn('type=registry,compression=gzip,compression-level=1', args)
+        self.assertIn('--metadata-file', args)
+        self.assertIn('/work/result.json', args)
+
+    def test_registry_requires_explicit_builder_and_metadata(self):
+        for settings in ({}, {'BUILD_BUILDER': 'ci-builder'}):
+            result, calls, _ = self.run_setup(BUILD_OUTPUT='registry', **settings)
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(calls, [])
+
+    def test_unknown_output_is_rejected_before_docker(self):
+        result, calls, _ = self.run_setup(BUILD_OUTPUT='typo')
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(calls, [])
+
     def test_opt_in_creates_bounded_builder_and_loads_output(self):
         result, calls, config = self.run_setup(BUILD_MAX_PARALLELISM='2')
         self.assertEqual(result.returncode, 0, result.stderr)
