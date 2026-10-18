@@ -1,0 +1,5 @@
+# Nix Ciel brings cryptography 46, which requires cffi>=2 and conflicts
+# with upstream support-tools' exact cffi==1.17.1. Keep that pin unchanged.
+cryptography==45.0.7
+# llN-libparse declares wheel at runtime, but Nix does not propagate it.
+wheel==0.45.1

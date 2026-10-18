@@ -2,22 +2,32 @@
 # Run the mounted integration tests directly inside the EDA container.
 set -euo pipefail
 TEST_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-[[ $# == 0 ]] || { printf 'Usage: %s\n' "$0" >&2; exit 2; }
+mode=regular
+if [[ $# == 1 && $1 == --long-only ]]; then
+    mode=long
+elif [[ $# != 0 ]]; then
+    printf 'Usage: %s [--long-only]\n' "$0" >&2; exit 2
+fi
 cd "$TEST_ROOT"
-mkdir -p run/logs
-summary="$TEST_ROOT/run/summary.tsv"
+output="$TEST_ROOT/run"
+[[ $mode != long ]] || output="$output/full"
+mkdir -p "$output/logs"
+summary="$output/summary.tsv"
 printf 'test\tstatus\tseconds\tlog\n' > "$summary"
 passed=0
 failed=0
 excluded=0
 declare -A exclusions=()
 if [[ -f "$TEST_ROOT/exclusions.json" ]]; then
-    exclusion_rows=$(python3 - "$TEST_ROOT/exclusions.json" <<'PY'
+    exclusion_rows=$(python3 - "$TEST_ROOT/exclusions.json" "$mode" <<'PY'
 import json
 import sys
 with open(sys.argv[1]) as stream:
     data = json.load(stream)
-for name, reason in data.get('tests', {}).items():
+exclusions = dict(data.get('tests', {}))
+if sys.argv[2] == 'regular':
+    exclusions = {**data.get('long_running', {}), **exclusions}
+for name, reason in exclusions.items():
     assert '\t' not in name + reason and '\n' not in name + reason
     print(name + '\t' + reason)
 PY
@@ -27,9 +37,21 @@ PY
     done <<< "$exclusion_rows"
 fi
 mapfile -t tests < <(find analog digital gui inventory pdk -type f -name '*.sh' 2>/dev/null | LC_ALL=C sort)
+if [[ $mode == long ]]; then
+    long_rows=$(python3 - "$TEST_ROOT/exclusions.json" <<'PY'
+import json, sys
+with open(sys.argv[1]) as stream:
+    print('\n'.join(sorted(json.load(stream).get('long_running', {}))))
+PY
+)
+    tests=()
+    while IFS= read -r test; do
+        [[ -z $test ]] || tests+=("$test")
+    done <<< "$long_rows"
+fi
 [[ ${#tests[@]} -gt 0 ]] || { echo 'No integration tests discovered' >&2; exit 1; }
 for test in "${tests[@]}"; do
-    log="$TEST_ROOT/run/logs/${test//\//_}.log"
+    log="$output/logs/${test//\//_}.log"
     printf '\nRunning %s\n' "$test"
     if [[ -v exclusions["$test"] ]]; then
         excluded=$((excluded + 1))
@@ -40,7 +62,9 @@ for test in "${tests[@]}"; do
     fi
     start=$SECONDS
     status=PASS
-    if timeout --kill-after=10 "${TEST_TIMEOUT:-900}" bash "$TEST_ROOT/$test" > "$log" 2>&1; then
+    default_timeout=900
+    case "$test" in pdk/librelane-template-*.sh) default_timeout=14400 ;; esac
+    if timeout --kill-after=10 "${TEST_TIMEOUT:-$default_timeout}" bash "$TEST_ROOT/$test" > "$log" 2>&1; then
         passed=$((passed + 1))
     else
         code=$?
@@ -69,5 +93,5 @@ for name, reason in exclusions.get('manifest', {}).items():
     print(f'Inventory exclusion: {name} — {reason}')
 PY
 fi
-printf 'Logs and summary: %s/run/\n' "$TEST_ROOT"
+printf 'Logs and summary: %s/\n' "$output"
 [[ $failed == 0 ]]

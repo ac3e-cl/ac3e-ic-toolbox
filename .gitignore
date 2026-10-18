@@ -58,7 +58,10 @@ dkms.conf
 *.raw
 **/run
 tests/run/
-shared/
+shared/*
+!shared/tests/
+shared/tests/*
+!shared/tests/gnucap.sh
 
 # env file
 .env

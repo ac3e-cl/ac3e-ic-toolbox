@@ -5,7 +5,7 @@ class ShellEnvironment(PdkContract):
         designs = self.base / 'designs'
         designs.mkdir()
         (designs / '.designinit').write_text('export PDK=gf180mcuD\nexport HOOK_COUNT=$(( ${HOOK_COUNT:-0} + 1 ))\n')
-        r = self.bash(f'''set -eu; before=$PWD; source "{CONFIG}/unic-cass-env.sh"; old=$PATH; source "{CONFIG}/unic-cass-env.sh"; test "$PATH" = "$old"; test "$PWD" = "$before"; test "$HOOK_COUNT" = 1; test "$PDK" = gf180mcuD; bash -c 'type sak-pdk; test "$PDK" = gf180mcuD' ''')
+        r = self.bash(f'''set -eu; before=$PWD; source "{CONFIG}/ac3e-ic-toolbox-env.sh"; old=$PATH; source "{CONFIG}/ac3e-ic-toolbox-env.sh"; test "$PATH" = "$old"; test "$PWD" = "$before"; test "$HOOK_COUNT" = 1; test "$PDK" = gf180mcuD; bash -c 'type sak-pdk; test "$PDK" = gf180mcuD' ''')
         self.assertEqual(r.returncode, 0, r.stderr)
     def test_nix_and_shell_modes(self):
         nix = self.base / '.nix-profile/etc/profile.d'
@@ -19,5 +19,5 @@ class ShellEnvironment(PdkContract):
         designs = self.base / 'designs'
         designs.mkdir()
         (designs / '.designinit').write_text('return 19\n')
-        r = self.bash(f'source "{CONFIG}/unic-cass-env.sh"')
+        r = self.bash(f'source "{CONFIG}/ac3e-ic-toolbox-env.sh"')
         self.assertEqual(r.returncode, 19, r.stderr)

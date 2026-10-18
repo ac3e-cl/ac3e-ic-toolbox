@@ -13,6 +13,9 @@ cp "$TEST_ROOT/data/analog/cvc-inverter.cdl" inverter.cdl
 cp "$TEST_ROOT/data/analog/cvc-models" models
 cp "$TEST_ROOT/data/analog/cvc-power" power
 cp "$TEST_ROOT/data/analog/cvc.cvcrc" inverter.cvcrc
+if LC_ALL=C grep -q $'\r' inverter.cvcrc; then
+    fail "CVC configuration contains CRLF line endings; LF is required. Check $TEST_ROOT/data/analog/cvc.cvcrc"
+fi
 rm -f inverter.rpt inverter.rpt.error.gz
 # CVC can exit zero on fatal input errors, so validate completed checking too.
 cvc_rv inverter.cvcrc > cvc.stdout 2>&1 || fail "CVC execution failed: $OUT_DIR/cvc.stdout"

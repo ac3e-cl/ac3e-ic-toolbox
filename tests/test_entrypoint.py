@@ -47,6 +47,37 @@ class Entrypoint(PdkContract):
                 process.communicate()
     def test_exit_status(self):
         self.assertEqual(self.run_entry('--shell', 'bash', '-c', 'exit 7').returncode, 7)
+    def test_x11_opens_terminal_for_local_and_network_displays(self):
+        bins = self.base / 'bin'
+        bins.mkdir()
+        terminal = bins / 'xterm'
+        terminal.write_text('#!/bin/bash\nprintf "<%s>" "$@"\nprintf "\\n%s|%s\\n" "$DISPLAY" "$PDKPATH"\nexit 7\n')
+        terminal.chmod(0o755)
+        for display in [':0', 'host.docker.internal:0', '192.0.2.1:0']:
+            for args in [(), ('--x11',)]:
+                with self.subTest(display=display, args=args):
+                    env = dict(self.env, ENABLE_GUI='', DISPLAY=display, PATH=str(bins) + ':' + self.env['PATH'])
+                    r = subprocess.run(['bash', str(CONFIG / 'entrypoint.sh'), *args], env=env, input='', text=True, capture_output=True, timeout=5)
+                    self.assertEqual(r.returncode, 7, r.stderr)
+                    self.assertIn('<-e></bin/bash><-i>', r.stdout)
+                    self.assertIn(f'{display}|{self.base}/pdks/ihp-sg13g2', r.stdout)
+    def test_x11_preserves_explicit_command_and_arguments(self):
+        env = dict(self.env, DISPLAY='host.docker.internal:0')
+        r = subprocess.run(['bash', str(CONFIG / 'entrypoint.sh'), '--x11', 'printf', '<%s>', 'a b', '*'], env=env, text=True, capture_output=True, timeout=5)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(r.stdout.endswith('<a b><*>'), r.stdout)
+    def test_shell_with_display_does_not_open_graphical_terminal(self):
+        env = dict(self.env, DISPLAY='host.docker.internal:0')
+        # A private rcfile avoids host dotfiles and exits the interactive shell.
+        (self.base / '.bashrc').write_text('printf "shell-only\\n"\nexit 7\n')
+        r = subprocess.run(['bash', str(CONFIG / 'entrypoint.sh'), '--shell'], env=env, input='', text=True, capture_output=True, timeout=5)
+        self.assertEqual(r.returncode, 7, r.stderr)
+        self.assertIn('shell-only', r.stdout)
+    def test_x11_requires_display(self):
+        env = dict(self.env, DISPLAY='')
+        r = subprocess.run(['bash', str(CONFIG / 'entrypoint.sh'), '--x11'], env=env, text=True, capture_output=True, timeout=5)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn('X11 requires DISPLAY', r.stderr)
     def test_invalid_option(self):
         self.assertEqual(self.run_entry('--unknown').returncode, 2)
     def test_headless_vnc(self):

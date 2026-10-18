@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in the UNIC-CASS IC Design Tools project, please report it as soon as possible.
+If you discover a security vulnerability in the AC3E IC Toolbox project, please report it as soon as possible.
 
 - **Do not** create a public GitHub issue for security-related matters.
 - Instead, please email the maintainers at [add your security contact email here] or use the private contact option on GitHub if available.

@@ -3,8 +3,8 @@
 Run from the repository root, against the GUI-enabled image:
 
 ```bash
-docker run --rm -v "$PWD/tests:/home/designer/tests" isaiassh/unic-cass-tools:2.0.0 bash /home/designer/tests/gui/test-gtkwave.sh
-docker run --rm -v "$PWD/tests:/home/designer/tests" isaiassh/unic-cass-tools:2.0.0 bash /home/designer/tests/gui/test-gaw3-xschem.sh
+docker run --rm -v "$PWD/tests:/home/designer/tests" isaiash/ac3e-ic-toolbox:0.1.0 bash /home/designer/tests/gui/test-gtkwave.sh
+docker run --rm -v "$PWD/tests:/home/designer/tests" isaiash/ac3e-ic-toolbox:0.1.0 bash /home/designer/tests/gui/test-gaw3-xschem.sh
 ```
 
 - GTKWave converts the five-transition VCD fixture to FST and back, checks exact signal values/times/timescale, then loads the FST using GTKWave's documented `--exit` loader mode. The loader must exit normally within 15 seconds; timeout is failure.

@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location('unic_mcp', ROOT / 'images/mcp/server.py')
+    spec = importlib.util.spec_from_file_location('ac3e_ic_toolbox_mcp', ROOT / 'images/mcp/server.py')
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -37,6 +37,38 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status['workspace'], str(self.workspace))
         self.assertEqual(self.backend.list_pdks(), ['sky130A'])
         self.assertRaises(ValueError, self.backend.validate_pdk, '../pdks')
+
+    def test_linux_argv_cwd_and_shell_are_explicit_jobs(self):
+        directory = self.workspace / 'a directory'
+        directory.mkdir()
+        job = self.backend.run_command(['printf', '%s', 'literal ; $(touch unwanted)'], cwd='a directory')
+        self.assertEqual(self.wait_job(job)['state'], 'succeeded')
+        self.assertIn('literal ; $(touch unwanted)', self.backend.job_logs(job['job_id'])['text'])
+        self.assertFalse((directory / 'unwanted').exists())
+        shell = self.backend.run_shell('printf hello > result; pwd', cwd=str(directory))
+        self.assertEqual(self.wait_job(shell)['state'], 'succeeded')
+        self.assertEqual((directory / 'result').read_text(), 'hello')
+        self.assertEqual(self.backend.job_status(shell['job_id'])['cwd'], str(directory))
+        self.assertTrue(self.backend.list_jobs()['jobs'])
+        for argv in ([], [''], ['printf', '\x00'], 'echo x'):
+            self.assertRaises(ValueError, self.backend.run_command, argv)
+        self.assertRaises(ValueError, self.backend.run_command, ['pwd'], cwd='missing')
+
+    def test_detached_stdout_holder_cannot_block_job_completion(self):
+        import os
+        import signal
+        directory = self.workspace
+        script = "setsid bash -c 'echo $$ > detached.pid; exec sleep 30' & while [[ ! -s detached.pid ]]; do sleep 0.01; done"
+        job = self.backend.run_command(['bash', '-c', script], cwd=str(directory))
+        try:
+            self.assertEqual(self.wait_job(job)['state'], 'succeeded')
+        finally:
+            pid_file = directory / 'detached.pid'
+            if pid_file.exists():
+                try:
+                    os.kill(int(pid_file.read_text()), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
 
     def wait_job(self, job):
         import time
@@ -94,6 +126,9 @@ class ServerTests(unittest.TestCase):
         import time
         from unittest.mock import mock_open, patch
         self.install_fake_tool('ngspice', 'sleep 30 &\necho $! > child.pid\nhead -c 1000000 /dev/zero\nwait\n')
+        # Trigger the injected write failure after the child PID is recorded,
+        # not while the runtime initializer is emitting its banner.
+        self.config.write_text(self.config.read_text().replace('echo config-noise\n', ''))
         (self.workspace / 'a.cir').write_text('x')
         for operation in ('write', 'flush'):
             with self.subTest(operation=operation):
@@ -130,7 +165,7 @@ class ServerTests(unittest.TestCase):
 
     def test_output_root_symlink_is_rejected(self):
         self.backend.close()
-        (self.workspace / '.unic-cass-mcp').symlink_to(self.root)
+        (self.workspace / '.ac3e-ic-toolbox-mcp').symlink_to(self.root)
         self.assertRaises(ValueError, self.module.Backend, self.workspace, self.config, self.pdks)
 
     def test_script_runners_and_flow_use_fixed_argv(self):
@@ -194,11 +229,11 @@ class ServerTests(unittest.TestCase):
                 events.append(transport)
         with patch.object(self.module, 'Backend', FakeBackend), patch.object(self.module, 'create_server', return_value=FakeServer()):
             self.module.main([])
-        self.assertEqual(events, [('/foss/designs', '/opt/unic-cass/config/unic-cass-env.sh', '/opt/pdks'), 'stdio', 'closed'])
+        self.assertEqual(events, [('/foss/designs', '/opt/ac3e-ic-toolbox/config/ac3e-ic-toolbox-env.sh', '/opt/pdks'), 'stdio', 'closed'])
 
     def test_workspace_rejects_traversal_and_symlink_escape(self):
         (self.workspace / 'escape').symlink_to(self.root)
-        for path in ('../env.sh', '/etc/passwd', 'escape/env.sh', '.unic-cass-mcp/x'):
+        for path in ('../env.sh', '/etc/passwd', 'escape/env.sh', '.ac3e-ic-toolbox-mcp/x'):
             with self.subTest(path=path):
                 self.assertRaises(ValueError, self.backend.input_path, path)
 

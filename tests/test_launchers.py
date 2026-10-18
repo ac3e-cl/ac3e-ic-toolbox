@@ -20,7 +20,7 @@ class Launchers(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         argv = json.loads(result.stdout)
         self.assertEqual(argv[-4:], ['--shell', 'printf', 'a b', '*'])
-        self.assertIn(f'isaiassh/ac3e-ic-toolbox:{VERSION}', argv)
+        self.assertIn(f'isaiash/ac3e-ic-toolbox:{VERSION}', argv)
         self.assertIn(f'type=bind,source={ROOT}/shared,target=/home/designer/shared', argv)
         self.assertIn(f'type=bind,source={ROOT}/tests,target=/home/designer/tests', argv)
         self.assertFalse(any('DISPLAY' in a or 'privileged' in a or 'net=host' in a for a in argv))
@@ -30,8 +30,8 @@ class Launchers(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         argv = json.loads(result.stdout)
         self.assertIn('12345:23456', argv)
-        self.assertIn('HOME=/tmp/unic-cass-home', argv)
-        self.assertIn('/tmp/unic-cass-home:rw,nosuid,nodev,mode=0700,uid=12345,gid=23456', argv)
+        self.assertIn('HOME=/tmp/ac3e-ic-toolbox-home', argv)
+        self.assertIn('/tmp/ac3e-ic-toolbox-home:rw,nosuid,nodev,mode=0700,uid=12345,gid=23456', argv)
         self.assertIn('--entrypoint', argv)
         self.assertEqual(argv[-4:], ['--shell', 'printf', 'a b', '*'])
         self.assertNotIn('chown', ' '.join(argv))
@@ -96,6 +96,51 @@ class Launchers(unittest.TestCase):
         result = self.launch('shell', 'tool', '--token=private-value')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn('private-value', result.stdout)
+
+    def existing_container(self, mode='x', running=False, compatible=True):
+        with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
+            path = Path(tmp)
+            name = 'launcher-regression'
+            state = [{'Config': {'Image': f'isaiash/ac3e-ic-toolbox:{VERSION}' if compatible else 'other:image',
+                                 'Env': ['DISPLAY=:0']},
+                      'Mounts': [{'Source': tmp, 'Destination': '/home/designer/shared'},
+                                 {'Source': '/tmp/.X11-unix', 'Destination': '/tmp/.X11-unix'}],
+                      'State': {'Running': running}}]
+            (path / 'state.json').write_text(json.dumps(state))
+            docker = path / 'docker'
+            docker.write_text('#!/bin/bash\n'
+                              'python3 -c \'import json,os,sys; open(os.environ["CALLS"], "a").write(json.dumps(sys.argv[1:])+"\\n")\' "$@"\n'
+                              'if [[ $1 == container && $2 == ls ]]; then printf "%s\\n" "$CONTAINER_NAME"; fi\n'
+                              'if [[ $1 == container && $2 == inspect ]]; then /bin/cat "$STATE"; fi\n')
+            docker.chmod(0o755)
+            result = self.launch(mode, DRY_RUN='0', PATH=tmp + ':' + os.environ['PATH'],
+                                 DESIGNS=tmp, DISPLAY=':0', CONTAINER_NAME=name,
+                                 DOCKER_USER='isaiash', DOCKER_IMAGE='ac3e-ic-toolbox', DOCKER_TAG=VERSION,
+                                 CALLS=str(path / 'calls'), STATE=str(path / 'state.json'))
+            calls = [json.loads(line) for line in (path / 'calls').read_text().splitlines()]
+            return result, calls
+
+    def test_start_resumes_compatible_stopped_container(self):
+        for mode in ('x', 'shell', 'vnc', 'jupyter'):
+            with self.subTest(mode=mode):
+                result, calls = self.existing_container(mode)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                expected = ['container', 'start']
+                if mode in ('x', 'shell'):
+                    expected += ['-ai']
+                self.assertEqual(calls[-1], expected + ['launcher-regression'])
+                self.assertFalse(any(call[0] in ('run', 'image') for call in calls))
+
+    def test_start_refuses_incompatible_stopped_container(self):
+        result, calls = self.existing_container(compatible=False)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('confirm replacement', result.stderr)
+        self.assertEqual(calls[-1], ['container', 'inspect', 'launcher-regression'])
+
+    def test_start_running_container_executes_shell_without_recreating(self):
+        result, calls = self.existing_container(running=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls[-1], ['exec', '-it', 'launcher-regression', '/bin/bash'])
 
     def test_docker_failure_status_is_propagated(self):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:

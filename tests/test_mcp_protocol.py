@@ -33,7 +33,69 @@ class MCPProtocolTests(unittest.TestCase):
                     names = {tool.name for tool in tools.tools}
                     self.assertTrue({'environment_status', 'list_pdks', 'simulate_netlist',
                                      'run_script', 'start_flow', 'job_status', 'job_logs',
-                                     'cancel_job', 'list_artifacts', 'read_artifact'} <= names)
+                                     'cancel_job', 'list_artifacts', 'read_artifact',
+                                     'tool_catalog', 'run_tool', 'run_command', 'run_shell',
+                                     'list_jobs', 'read_file', 'write_file', 'edit_file',
+                                     'list_directory', 'stat_path', 'make_directory',
+                                     'copy_path', 'move_path', 'remove_path', 'search_files'} <= names)
+                    catalog = await session.call_tool('tool_catalog', {})
+                    self.assertFalse(catalog.isError, catalog)
+                    directory = 'mcp-files-' + uuid.uuid4().hex
+                    for tool_name, arguments in (
+                        ('make_directory', {'path': directory}),
+                        ('write_file', {'path': directory + '/a.txt', 'content': 'MCP file'}),
+                        ('edit_file', {'path': directory + '/a.txt', 'old_text': 'file', 'new_text': 'edited'}),
+                        ('copy_path', {'source': directory + '/a.txt', 'destination': directory + '/b.txt'}),
+                        ('move_path', {'source': directory + '/b.txt', 'destination': directory + '/c.txt'}),
+                        ('list_directory', {'path': directory}),
+                        ('stat_path', {'path': directory + '/a.txt'}),
+                        ('search_files', {'path': directory, 'pattern': '*.txt'}),
+                    ):
+                        called = await session.call_tool(tool_name, arguments)
+                        self.assertFalse(called.isError, (tool_name, called))
+                    read = await session.call_tool('read_file', {'path': directory + '/a.txt'})
+                    self.assertEqual(self.payload(read)['text'], 'MCP edited')
+                    rtl = await session.call_tool('write_file', {
+                        'path': directory + '/smoke.sv',
+                        'content': 'module smoke; initial begin $display("MCP VVP OK"); $finish; end endmodule\n'})
+                    self.assertFalse(rtl.isError, rtl)
+                    compiled_dir = ''
+                    for tool_name, arguments in (
+                        ('run_command', {'argv': ['printf', '%s', 'linux literal ; $HOME'], 'cwd': directory}),
+                        ('run_shell', {'script': 'printf shell > linux.txt; cat linux.txt', 'cwd': directory}),
+                        ('run_tool', {'tool': 'yosys', 'arguments': ['-Q', '-T', '-p', 'help']}),
+                        ('lint_verilog', {'sources': [directory + '/smoke.sv'], 'top': 'smoke'}),
+                        ('compile_verilog', {'sources': [directory + '/smoke.sv'], 'top': 'smoke'}),
+                        ('run_vvp', {'program': '__COMPILED__'}),
+                    ):
+                        if tool_name == 'run_vvp':
+                            arguments['program'] = compiled_dir + '/simulation.vvp'
+                        submitted = await session.call_tool(tool_name, arguments)
+                        self.assertFalse(submitted.isError, submitted)
+                        test_id = self.payload(submitted)['job_id']
+                        for _ in range(300):
+                            result = self.payload(await session.call_tool('job_status', {'job_id': test_id}))
+                            if result['state'] not in ('queued', 'running'):
+                                break
+                            await asyncio.sleep(0.1)
+                        self.assertEqual(result['state'], 'succeeded', result)
+                        log = self.payload(await session.call_tool('job_logs', {'job_id': test_id}))
+                        if tool_name == 'run_command':
+                            self.assertIn('linux literal ; $HOME', log['text'])
+                        elif tool_name == 'run_shell':
+                            self.assertIn('shell', log['text'])
+                        elif tool_name == 'compile_verilog':
+                            compiled_dir = result['output_dir']
+                            artifact = await session.call_tool('read_artifact', {'job_id': test_id, 'path': 'simulation.vvp'})
+                            self.assertFalse(artifact.isError, artifact)
+                        elif tool_name == 'run_vvp':
+                            self.assertIn('MCP VVP OK', log['text'])
+                    refused = await session.call_tool('remove_path', {'path': directory, 'recursive': True})
+                    self.assertTrue(refused.isError)
+                    removed = await session.call_tool('remove_path', {'path': directory, 'recursive': True, 'confirm': True})
+                    self.assertFalse(removed.isError, removed)
+                    missing = await session.call_tool('stat_path', {'path': directory})
+                    self.assertTrue(missing.isError)
                     status = await session.call_tool('environment_status', {})
                     self.assertFalse(getattr(status, 'isError', True), status)
                     pdks = await session.call_tool('list_pdks', {})

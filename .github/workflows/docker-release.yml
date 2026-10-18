@@ -63,6 +63,10 @@ jobs:
 
           printf 'RELEASE_VERSION=%s\n' "${release_version}" >> "${GITHUB_ENV}"
           printf 'RELEASE_IMAGE=%s\n' "${image_reference}" >> "${GITHUB_ENV}"
+          printf 'CANDIDATE_IMAGE=%s/%s:ci-%s-%s-%s\n' \
+            "${image_namespace}" "${image_name}" "${GITHUB_SHA}" \
+            "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_ENV}"
+          printf 'CI_BUILDER=release-%s-%s\n' "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_ENV}"
 
       - name: Reclaim runner disk space
         run: |
@@ -97,16 +101,104 @@ jobs:
           done
           CHECK_ONLY=1 ./build/build-image.sh
 
+      - name: Log in to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          printf '%s' "${DOCKERHUB_TOKEN}" |
+            docker login --username "${DOCKERHUB_USERNAME}" --password-stdin
+
+      - name: Create memory-bounded CI builder
+        run: |
+          set -Eeuo pipefail
+          # Leave host headroom; memory-swap is RAM + swap, not extra swap.
+          # GOMEMLIMIT is a soft Go runtime budget, not a total RSS limit.
+          docker buildx create --name "${CI_BUILDER}" \
+            --driver docker-container \
+            --driver-opt memory=10g,memory-swap=12g,env.GOMEMLIMIT=6GiB,env.GOGC=50 \
+            --buildkitd-config build/ci-buildkit.toml
+          docker buildx inspect --bootstrap "${CI_BUILDER}"
+          docker version
+          docker buildx version
+
       - name: Build release image
         env:
-          BUILD_IMAGE_TAG: ${{ env.RELEASE_IMAGE }}
+          BUILD_IMAGE_TAG: ${{ env.CANDIDATE_IMAGE }}
           DOCKER_TAG: ${{ env.RELEASE_VERSION }}
           BUILDKIT_PROGRESS: plain
-        run: ./build/build-image.sh
+          BUILD_VERBOSE: "1"
+          BUILD_OUTPUT: registry
+          BUILD_BUILDER: ${{ env.CI_BUILDER }}
+          BUILD_MAX_PARALLELISM: "2"
+          MAX_BUILD_JOBS: "2"
+          BUILD_METADATA_FILE: ${{ runner.temp }}/build-metadata.json
+        run: |
+          set -Eeuo pipefail
+          diagnostics="${RUNNER_TEMP}/build-diagnostics.log"
+          snapshot() {
+            date -u
+            df -h / /var/lib/docker
+            df -i / /var/lib/docker
+            free -h
+            ps -C dockerd,buildkitd -o pid,comm,rss,vsz || true
+            docker stats --no-stream "buildx_buildkit_${CI_BUILDER}0" || true
+          }
+          monitor() {
+            while true; do
+              snapshot
+              sleep 30
+            done
+          }
+          monitor > "${diagnostics}" 2>&1 &
+          monitor_pid=$!
+          finish_build_diagnostics() {
+            status=$?
+            trap - EXIT
+            kill "${monitor_pid}" 2>/dev/null || true
+            wait "${monitor_pid}" 2>/dev/null || true
+            snapshot >> "${diagnostics}" 2>&1 || true
+            sudo journalctl -k --since '-15 minutes' --no-pager >> "${diagnostics}" 2>&1 || true
+            sudo journalctl -u docker --since '-15 minutes' --no-pager >> "${diagnostics}" 2>&1 || true
+            docker logs "buildx_buildkit_${CI_BUILDER}0" >> "${diagnostics}" 2>&1 || true
+            docker inspect "buildx_buildkit_${CI_BUILDER}0" --format '{{json .State}}' >> "${diagnostics}" 2>&1 || true
+            cat "${diagnostics}"
+            exit "${status}"
+          }
+          trap finish_build_diagnostics EXIT
+          trap 'exit 143' TERM
+          trap 'exit 130' INT
+          ./build/build-image.sh
+
+      - name: Preserve build diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-diagnostics
+          path: |
+            ${{ runner.temp }}/build-diagnostics.log
+            ${{ runner.temp }}/build-metadata.json
+            build/_build_logs/*.log
+          if-no-files-found: ignore
+
+      - name: Release builder memory and disk before pulling
+        if: ${{ always() && env.CI_BUILDER != '' }}
+        run: docker buildx rm --force "${CI_BUILDER}"
+
+      - name: Pull immutable candidate for tests
+        run: |
+          set -Eeuo pipefail
+          digest=$(jq -er '."containerimage.digest" | select(type == "string") |
+            select(test("^sha256:[0-9a-f]{64}$"))' "${RUNNER_TEMP}/build-metadata.json")
+          test_image="${CANDIDATE_IMAGE%:*}@${digest}"
+          docker pull "${test_image}"
+          printf 'TEST_IMAGE=%s\n' "${test_image}" >> "${GITHUB_ENV}"
+          printf 'TEST_DIGEST=%s\n' "${digest}" >> "${GITHUB_ENV}"
 
       - name: Run integration tests
         env:
-          IMAGE: ${{ env.RELEASE_IMAGE }}
+          IMAGE: ${{ env.TEST_IMAGE }}
         run: |
           set -Eeuo pipefail
           test_output="${GITHUB_WORKSPACE}/tests/run"
@@ -127,16 +219,18 @@ jobs:
           path: tests/run/
           if-no-files-found: ignore
 
-      - name: Log in to Docker Hub
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          printf '%s' "${DOCKERHUB_TOKEN}" |
-            docker login --username "${DOCKERHUB_USERNAME}" --password-stdin
-
       - name: Push release image
-        run: docker push "${RELEASE_IMAGE}"
+        run: |
+          set -Eeuo pipefail
+          # Copy the tested manifest in the registry; no second layer export.
+          docker buildx imagetools create --prefer-index=false \
+            --tag "${RELEASE_IMAGE}" "${TEST_IMAGE}"
+          published=$(docker buildx imagetools inspect "${RELEASE_IMAGE}" \
+            --format '{{json .Manifest}}' | jq -er '.digest')
+          [[ "${published}" == "${TEST_DIGEST}" ]] || {
+            echo 'Published digest differs from tested digest.' >&2
+            exit 1
+          }
 
       - name: Log out from Docker Hub
         if: ${{ always() }}
