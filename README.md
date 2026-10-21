@@ -1,16 +1,11 @@
 ![AC3E IC Toolbox](HEADER.png)
 
-# AC3E IC Toolbox
-
 [![Docker Image Version](https://img.shields.io/docker/v/isaiash/ac3e-ic-toolbox?sort=semver&style=flat-square&logo=docker&label=Release)](https://hub.docker.com/r/isaiash/ac3e-ic-toolbox/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg?style=flat-square)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=Issues&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=PRs&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/pulls)
 [![Contributors](https://img.shields.io/github/contributors/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=Contributors&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/graphs/contributors)
 [![Docker Pulls](https://img.shields.io/docker/pulls/isaiash/ac3e-ic-toolbox?style=flat-square&label=Pulls&logo=docker)](https://hub.docker.com/r/isaiash/ac3e-ic-toolbox)
-
----
-
 ## Quickstart: use the published image (no local build)
 
 From a Linux desktop terminal (or WSL 2 with an X server configured), install
