@@ -51,7 +51,6 @@ apt -y install \
 	graphviz \
 	gtk2-engines-pixbuf \
 	help2man \
-	language-pack-en-base \
 	lcov \
 	librsvg2-2 \
 	librsvg2-common \
@@ -107,7 +106,7 @@ apt -y install \
 	libssl-dev \
 	libstdc++-11-dev \
 	libsuitesparse-dev \
-	libtcl \
+	libtcl8.6 \
 	libtool \
 	libx11-dev \
 	libx11-xcb-dev \
@@ -181,13 +180,15 @@ rm -rf /tmp/*
 apt -y autoremove --purge
 apt -y clean
 
-pip install uv
+"$EDA_PYTHON/bin/python" -m pip install --no-cache-dir uv
 
-uv pip install --system --strict --compile-bytecode --no-cache \
+uv pip install --python "$EDA_PYTHON/bin/python" --strict --compile-bytecode --no-cache \
 	"numpy<2" \
 	volare==0.18.1 \
 	docopt \
 	click
+
+"$EDA_PYTHON/bin/python" -m pip check
 
 # Cleanup: Remove Python cache files
 find /usr/local -name "*.pyc" -delete 2>/dev/null || true

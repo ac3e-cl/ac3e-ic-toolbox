@@ -37,7 +37,7 @@
   "build": {
     "target": "ac3e-ic-toolbox",
     "arguments": {
-      "BASE_IMAGE": "ubuntu:22.04",
+      "BASE_IMAGE": "debian:bookworm-slim",
       "ENABLE_GUI": "",
       "MAX_BUILD_JOBS": "2",
       "NGSPICE_REPO_URL": "https://github.com/danchitnis/ngspice-sf-mirror",
@@ -65,9 +65,10 @@
       "OPENVAF_REPO_COMMIT": "a9697ae7780518f021f9f64e819b3a57033bd39f",
       "OPENVAF_DOWNLOAD": "https://openva.fra1.cdn.digitaloceanspaces.com/openvaf_23_5_0_linux_amd64.tar.gz",
       "OPENVAF_NAME": "openvaf",
+      "OPENVAF_RUST_VERSION": "1.74.1",
       "KLAYOUT_REPO_URL": "https://github.com/KLayout/klayout",
       "KLAYOUT_REPO_COMMIT": "v0.30.11",
-      "KLAYOUT_DOWNLOAD": "https://www.klayout.org/downloads/Ubuntu-22/klayout_0.30.11-1_amd64.deb",
+      "KLAYOUT_DOWNLOAD": "",
       "KLAYOUT_NAME": "klayout",
       "XSCHEM_REPO_URL": "https://github.com/StefanSchippers/xschem.git",
       "XSCHEM_REPO_COMMIT": "cfbeaf069db7c8872e501ad7963fcc291d83d944",

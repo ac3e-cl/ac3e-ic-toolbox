@@ -2,12 +2,12 @@
 
 set -ex
 
-pip install uv
+"$EDA_PYTHON/bin/python" -m pip install --no-cache-dir uv
 
 # Increase timeout for large package downloads
 export UV_HTTP_TIMEOUT=300
 
-uv pip install --system --strict --compile-bytecode \
+uv pip install --python "$EDA_PYTHON/bin/python" --strict --compile-bytecode \
     "numpy<2" \
     gdsfactory \
     glayout \
@@ -36,6 +36,8 @@ uv pip install --system --strict --compile-bytecode \
     click \
     "pygobject<3.52.0" \
     xdot
+
+"$EDA_PYTHON/bin/python" -m pip check
 
 # Cleanup: Remove Python cache files
 find /usr/local -name "*.pyc" -delete 2>/dev/null || true

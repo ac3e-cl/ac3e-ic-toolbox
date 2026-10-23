@@ -4,6 +4,19 @@ set -ex
 
 REPO_COMMIT_SHORT=$(echo "$OPENVAF_REPO_COMMIT" | cut -c 1-7)
 
+rust_installation () {
+    # Build-only toolchain: do not replace Debian's rustc for sibling stages.
+    rust_build_home=$(mktemp -d)
+    export CARGO_HOME="$rust_build_home/cargo"
+    export RUSTUP_HOME="$rust_build_home/rustup"
+    curl --fail --show-error --location --retry 3 https://sh.rustup.rs -o "$rust_build_home/rustup-init.sh"
+    sh "$rust_build_home/rustup-init.sh" -y --profile minimal --no-modify-path \
+        --default-toolchain "$OPENVAF_RUST_VERSION"
+    export PATH="$CARGO_HOME/bin:$PATH"
+    rustc --version
+    cargo --version
+}
+
 compile_binary () {
     git clone --filter=blob:none "${OPENVAF_REPO_URL}" "${OPENVAF_NAME}"
     cd "${OPENVAF_NAME}"
@@ -28,7 +41,7 @@ index 13db6e5..dada68e 100644
      .expect("ucrt compilation succeeds");
 EOF
 
-    cargo build --jobs "${MAX_BUILD_JOBS:-2}" --release --bin openvaf
+    cargo build --jobs "${MAX_BUILD_JOBS:-2}" --locked --release --bin openvaf
 
     mkdir -p  "/${TOOLS}/${OPENVAF_NAME}/${REPO_COMMIT_SHORT}/bin"
     cp target/release/openvaf "/${TOOLS}/${OPENVAF_NAME}/${REPO_COMMIT_SHORT}/bin"
@@ -56,6 +69,7 @@ download_binary () {
 
 
 #download_binary
+rust_installation
 llvm_installation
 compile_binary
 
@@ -64,3 +78,4 @@ cd /tmp
 rm -rf "${OPENVAF_NAME}"
 rm -rf LLVM
 rm -f llvm-*.tar.zst
+rm -rf "$rust_build_home"

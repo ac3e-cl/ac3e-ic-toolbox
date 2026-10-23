@@ -51,6 +51,7 @@ update-locale LANG=$LANG
 MINIMUM_DEPS=(
 	# Build
     binutils
+    ca-certificates
 	build-essential
 	patch
 	make
@@ -76,8 +77,9 @@ MINIMUM_DEPS=(
 	bzip2
 	zip
 	unzip
-	unrar
+	unrar-free
 	python3-pip
+	python3-venv
 	python3-tk
 )
 
@@ -137,8 +139,9 @@ KLAYOUT_DEPS=(
 	libqt5widgets5
 	libqt5xml5
 	libqt5xmlpatterns5
-	libgit2-1.1
-	libruby3.0
+	libgit2-1.5
+	libruby3.1
+	libcurl4
 	libqt5dbus5
 )
 
@@ -208,4 +211,7 @@ rm -rf /tmp/*
 apt -y autoremove --purge
 apt -y clean
 
-update-alternatives --install /usr/bin/python python /usr/bin/python3 0	
+update-alternatives --install /usr/bin/python python /usr/bin/python3 0
+
+/usr/bin/python3 -c 'import sys; assert sys.version_info[:2] == (3, 11), sys.version'
+/usr/bin/python3 -m venv --system-site-packages "$EDA_PYTHON"

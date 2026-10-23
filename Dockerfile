@@ -1,7 +1,7 @@
 # Based on https://github.com/iic-jku/IIC-OSIC-TOOLS/blob/main/_build/Dockerfile
 
 # Default required for `docker build --check`; manifest.json overrides at build time.
-ARG BASE_IMAGE=ubuntu:22.04
+ARG BASE_IMAGE=debian:bookworm-slim
 
 # ngspice
 ARG NGSPICE_REPO_URL
@@ -41,6 +41,8 @@ ARG OPENVAF_REPO_URL
 ARG OPENVAF_REPO_COMMIT
 ARG OPENVAF_DOWNLOAD
 ARG OPENVAF_NAME
+# Rust 1.74.1 (2023-12-07), private build-only toolchain for pinned OpenVAF.
+ARG OPENVAF_RUST_VERSION
 
 # KLayout
 ARG KLAYOUT_REPO_URL
@@ -127,6 +129,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PDK_ROOT=/opt/pdks \
     MAX_BUILD_JOBS=${MAX_BUILD_JOBS}
 
+ENV EDA_PYTHON=/opt/eda-python
+ENV PATH="/opt/eda-python/bin:$PATH"
+
 USER root
 
 
@@ -164,7 +169,7 @@ FROM common AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
     locales ca-certificates build-essential autoconf automake autotools-dev \
     libtool pkg-config bison flex gawk git curl wget unzip zip patch autopoint gperf \
-    cmake ninja-build python3 python3-dev python3-pip python3-numpy \
+    cmake ninja-build python3 python3-dev python3-pip python3-venv python3-numpy \
     tcl tcl-dev tk-dev libreadline-dev libffi-dev libpcre2-dev \
     libx11-dev libxaw7-dev libxpm-dev libxrender-dev libxft-dev libglu1-mesa-dev \
     libcairo2-dev libgtk-3-dev libgtk2.0-dev libfftw3-dev \
@@ -172,8 +177,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     liblzma-dev libgmp-dev libssl-dev gettext help2man texinfo time bc csh && \
     sed -i -e "s/# $LC_ALL UTF-8/$LC_ALL UTF-8/" /etc/locale.gen && \
     locale-gen && \
+    /usr/bin/python3 -c 'import sys; assert sys.version_info[:2] == (3, 11), sys.version' && \
+    /usr/bin/python3 -m venv --system-site-packages "$EDA_PYTHON" && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 0 && \
     rm -rf /var/lib/apt/lists/*
+
+# KLayout 0.30.11: compile against Debian's Python 3.11/Ruby 3.1 ABI.
+FROM builder AS klayout
+ARG KLAYOUT_REPO_URL KLAYOUT_REPO_COMMIT KLAYOUT_NAME
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    qtbase5-dev qttools5-dev libqt5multimedia5-plugins qtmultimedia5-dev \
+    libqt5svg5-dev libqt5xmlpatterns5-dev ruby-dev libgit2-dev libcurl4-openssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+RUN --mount=type=bind,source=images/klayout,target=/images/klayout \
+    bash /images/klayout/install.sh
 
 # Preserve the exhaustive system toolchain only for LLVM/Trilinos/OpenROAD.
 # The existing installer supplies their compiler and system-library requirements;
@@ -266,6 +283,7 @@ COPY --from=gf180_pdk ${PDK_ROOT} ${PDK_ROOT}
 #######################################################################
 FROM heavyweight_builder AS openvaf
 
+ARG OPENVAF_RUST_VERSION
 ARG OPENVAF_REPO_URL \
     OPENVAF_REPO_COMMIT \
     OPENVAF_DOWNLOAD \
@@ -476,6 +494,7 @@ ARG NGSPICE_REPO_COMMIT \
     NETGEN_REPO_COMMIT
 
 
+COPY --from=klayout /opt/klayout /opt/klayout
 RUN --mount=type=bind,source=images/final_structure/install,target=/images/final_structure/install \
     bash /images/final_structure/install/install_klayout.sh
 

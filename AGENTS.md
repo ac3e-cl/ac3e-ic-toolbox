@@ -2,9 +2,11 @@
 
 ## Project overview
 
-UNIC-CASS IC Design Tools builds an Ubuntu 22.04 Docker image containing an open-source integrated-circuit design environment. The final image combines analog and digital EDA tools, the Sky130A, GF180MCU, and IHP SG13G2 PDKs, LibreLane, and GUI/VNC support. Most tools are compiled in independent Docker stages and copied into the final `unic-cass-tools-nix` stage.
+UNIC-CASS IC Design Tools builds a Debian 12 (Bookworm slim) Docker image with Python 3.11 containing an open-source integrated-circuit design environment. The final image combines analog and digital EDA tools, the Sky130A, GF180MCU, and IHP SG13G2 PDKs, LibreLane, and GUI/VNC support. Most tools, including KLayout, are compiled in independent Docker stages and copied into the final `ac3e-ic-toolbox` stage.
 
 The root `manifest.json` is the source of truth for upstream repository URLs and immutable revisions, passed to `Dockerfile` by the build wrappers. Tool-specific installation logic lives under `images/<tool>/install.sh`. Runtime configuration is assembled from `images/final_structure/`. The initially empty `shared/` is the user workspace; `tests/` mounts separately into a running container.
+
+EDA Python packages are installed in `/opt/eda-python`, exposed through `PATH`, without modifying Debian's externally managed Python. Preserve the isolated MCP and Nix/LibreLane interpreters. `KLAYOUT_DOWNLOAD` is retained as empty legacy metadata; the KLayout stage checks out `KLAYOUT_REPO_COMMIT` and compiles against Debian's Python/Ruby libraries.
 
 ## Prerequisites
 

@@ -25,6 +25,9 @@ class RepositoryContract(unittest.TestCase):
         after = json.loads((ROOT / 'manifest.json').read_text())
         self.assertTrue(GNUCAP_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
         expected_arguments = {**before['build']['arguments'], **GNUCAP_ARGUMENTS}
+        # Debian migration changes the base/packaging, not upstream tool pins.
+        expected_arguments.update(BASE_IMAGE='debian:bookworm-slim', KLAYOUT_DOWNLOAD='')
+        expected_arguments['OPENVAF_RUST_VERSION'] = '1.74.1'
         self.assertEqual(expected_arguments, after['build']['arguments'])
         self.assertEqual(after['build']['target'], 'ac3e-ic-toolbox')
         self.assertEqual(before['image']['registry'], after['image']['registry'])
@@ -43,10 +46,13 @@ class RepositoryContract(unittest.TestCase):
             'heavyweight_builder', 'openroad_dependencies']
         expected_stages[expected_stages.index('open_pdks'):expected_stages.index('open_pdks')] = [
             'pdk_builder', 'sky130_pdk', 'gf180_pdk']
+        # KLayout is rebuilt on Debian instead of installing an Ubuntu binary.
+        expected_stages.insert(expected_stages.index('heavyweight_builder'), 'klayout')
         # The final two stages are renamed, not new tools or a separate Nix variant.
         self.assertEqual(stages(after)[:-2], expected_stages)
         self.assertEqual(stages(after)[-2:], ['ac3e-ic-toolbox-base', 'ac3e-ic-toolbox'])
         expected_copies = copies(before)
+        expected_copies.insert(0, ['COPY', '--from=klayout', '/opt/klayout', '/opt/klayout'])
         ngspice_copy = ['COPY', '--from=ngspice', '${TOOLS}/ngspice', '${TOOLS}/ngspice']
         expected_copies.insert(expected_copies.index(ngspice_copy) + 1,
                                ['COPY', '--from=gnucap', '${TOOLS}/gnucap', '${TOOLS}/gnucap'])

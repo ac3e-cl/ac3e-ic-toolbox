@@ -299,6 +299,11 @@ shell behavior. Existing containers must be recreated to use the updated image.
 
 ## Installed Tools / PDKs
 
+The image is built on Debian 12 (Bookworm slim), with Python 3.11. EDA Python
+packages live in `/opt/eda-python` (on `PATH`), leaving Debian's system packages
+untouched. MCP and Nix/LibreLane retain independent Python environments.
+KLayout 0.30.11 is compiled on Debian rather than installed from an Ubuntu `.deb`.
+
 | Tool         | Description                                         | Source |
 |--------------|-----------------------------------------------------|--------|
 | **librelane** | Complete RTL-to-GDSII ASIC implementation flow     | Nix    |
@@ -314,9 +319,9 @@ shell behavior. Existing containers must be recreated to use the updated image.
 | iverilog     | Icarus Verilog simulator                            | System |
 | cvc          | Circuit validity checker                            | System |
 | cace         | Circuit Characterization engine                     | System |
-| gdsfactory   | Python module for GDS generation                    | System |
-| glayout      | Python module for PDK-agnostic layout automation    | System |
-| pygmid       | Python module for systematic circuit sizing         | System |
+| gdsfactory   | Python module for GDS generation                    | EDA Python venv |
+| glayout      | Python module for PDK-agnostic layout automation    | EDA Python venv |
+| pygmid       | Python module for systematic circuit sizing         | EDA Python venv |
 | openvaf      | Verilog-A to OSDI compiler                          | System |
 
 ### LibreLane Integration
