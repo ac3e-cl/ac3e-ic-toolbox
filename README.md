@@ -79,12 +79,18 @@ This work is based on:
 - GoCD NGSpice Agents for CICD VLSI Verification
 - Open Source Integrated Circuits Docker Stacks
 
-The standard image includes **[LibreLane](https://github.com/librelane/librelane)**, an ASIC implementation flow based on OpenROAD, Yosys, Magic, and Netgen. LibreLane provides a complete RTL-to-GDSII flow with support for IHP-sg13g2, Sky130, and GF180MCU PDKs, powered by the Nix package manager. Its source revision is pinned in `manifest.json`.
+The standard image includes **[LibreLane](https://github.com/librelane/librelane)**, an ASIC implementation flow based on OpenROAD, Yosys, Magic, and Netgen. The image supplies IHP-sg13g2 and GF180MCU PDKs, with LibreLane powered by the Nix package manager. Its source revision is pinned in `manifest.json`.
 
-For the IHP, Tiny Tapeout SKY130 and wafer.space GF180 upstream templates, use
+For the IHP and wafer.space GF180 upstream templates, use
 the separately pinned Nix environments and private PDKs described in
 [LibreLane template workflows and tests](docs/librelane-templates.md).
-The global toolbox tools and analog PDKs remain available unchanged.
+The global LibreLane installation and IHP/GF analog PDKs remain available.
+**SKY130 and the Tiny Tapeout SKY template are temporarily excluded** from this
+single image to analyze their impact on image size. Their reintroduction is
+planned for a later release after this space analysis. SKY tests, fixtures and
+test helpers are preserved but skipped through `tests/exclusions.json`, in both
+the regular and full suites; they are not counted as passes. There is no alternate
+SKY image.
 
 We welcome contributions from the global IC design community!
 
@@ -319,29 +325,59 @@ shell behavior. Existing containers must be recreated to use the updated image.
 | pygmid       | Python module for systematic circuit sizing         | System |
 | openvaf      | Verilog-A to OSDI compiler                          | System |
 
+### Python environments
+
+EDA Python packages use CPython 3.11.18 installed side-by-side with Ubuntu's
+system Python, with `/opt/eda-venv/bin` selected by default on `PATH`.
+`/usr/bin/python3` remains Ubuntu 22.04's Python 3.10; it is not replaced.
+The global and template-specific Nix environments keep their own interpreters
+and dependencies rather than sharing the EDA venv.
+
+The pinned Ubuntu KLayout `.deb` embeds Python **3.10**, regardless of `PATH`.
+Its GF180 PCells have a separate `/opt/klayout-pcells` venv containing `numpy<2`,
+`gdsfactory<8` (the PCells use the pre-8 `typings`/`geometry` API), and their
+required transitive dependencies—not the full user EDA package list.
+`/usr/local/bin/klayout` wraps `/usr/bin/klayout` and sets `KLAYOUT_PYTHONPATH`
+only for that process, retaining explicit caller KLayout paths. It also disables
+user-site imports for that process. No global `PYTHONPATH` or Python 3.11
+site-packages changes are needed. Calling `/usr/bin/klayout` directly bypasses
+this dependency setup. KLayout's [0.30.11 interpreter initialization](https://github.com/KLayout/klayout/blob/v0.30.11/src/pya/pya/pya.cc#L208-L231)
+explicitly maps `KLAYOUT_PYTHONPATH` into its embedded interpreter; its bundled
+`pymod` directory is prepended before these dependency paths. Inspection of the
+pinned Ubuntu-22 `.deb` confirms both the environment-variable string and the
+`libpython3.10.so.1.0` ELF dependency. The [pinned GF generators](https://github.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/tree/a11222d681f2134ab28e97f97b9b99b6af188f88/cells/klayout/pymacros/cells)
+are the source of the compatibility dependencies.
+
+Image build and runtime validation are still required. The real-image gate is
+`bash /home/designer/tests/pdk/klayout-gf180-tech.sh`: it checks embedded Python
+3.10, imports from the isolated venv, and generates/reopens a GF180 nfet GDS.
+The additional dependency closure/image size has not been measured.
+
 ### LibreLane Integration
 
 [LibreLane](https://github.com/librelane/librelane) is available directly from the command line and provides:
 - Complete RTL-to-GDSII automated flow
-- Multi-PDK support (IHP-sg13g2, Sky130A, GF180MCU)
+- Installed PDK support (IHP-sg13g2, GF180MCU D)
 - Design exploration and optimization
 - Integration with industry-standard IC design tools
 
 **Quick start with LibreLane:**
 ```bash
 librelane --help           # Show available options
-librelane --smoke-test     # Run a quick verification test
-librelane <config.json>    # Run a design flow
+# Run a small complete flow with the retained GF180 PDK:
+bash /home/designer/tests/pdk/librelane-gf180-smoke.sh
+# For your own config, select its installed PDK explicitly:
+librelane --manual-pdk --pdk-root /opt/pdks --pdk gf180mcuD path/to/config.json
 ```
 
 ### PDK Management
 
-The image contains the `sky130A`, `gf180mcuD`, and `ihp-sg13g2` PDKs. GF180MCU D is a supported PDK, not a deprecated optional download. To change between PDKs, use `sak-pdk` (compatible with IIC-OSIC-TOOLS) or the equivalent legacy `set_pdk` function:
+The image contains the `gf180mcuD` and `ihp-sg13g2` PDKs. GF180MCU D is a supported PDK, not a deprecated optional download. To change between PDKs, use `sak-pdk` (compatible with IIC-OSIC-TOOLS) or the equivalent legacy `set_pdk` function:
 
 ```bash
 sak-pdk             # List installed supported PDKs
 sak-pdk ihp-sg13g2   # Default PDK
-sak-pdk sky130A
+
 sak-pdk gf180mcuD gf180mcu_fd_sc_mcu7t5v0
 set_pdk gf180mcuD    # Equivalent legacy interface
 ```
@@ -393,9 +429,14 @@ the summary, never counted as passes. `TEST_TIMEOUT` controls the per-test limit
 default). Generated files, individual logs and `summary.tsv` are written under
 the gitignored `tests/run/`.
 
-The suite also verifies the three PDK environments, a GF180MCU MOSFET operating
+The suite checks the two retained IHP/GF PDK environments, a GF180MCU MOSFET operating
 point, GF KLayout technology/PCells and an explicit GF LibreLane counter flow
-with final metrics and GDS checks. Host runtime contracts run without design tools:
+with final metrics and GDS checks.
+
+The no-SKY image requires a rebuild and container integration runs; historical
+image results are not validation of this change. Full IHP/GF template flows
+remain explicit opt-in tests (`bash /home/designer/tests/test_all_full.sh`).
+Host runtime contracts run without design tools:
 
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py' -v

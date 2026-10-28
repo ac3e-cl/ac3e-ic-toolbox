@@ -2,63 +2,44 @@
 import json
 from pathlib import Path
 import re
-import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = '69cca4d'
-# Intentional addition to the historical tool selection, not a prefix exemption.
-GNUCAP_ARGUMENTS = {
-    'GNUCAP_REPO_URL': 'https://codeberg.org/gnucap/gnucap.git',
-    'GNUCAP_REPO_COMMIT': 'bcaff61b3c562179476bb6c5de783676994c61e1',
-    'GNUCAP_NAME': 'gnucap',
+BASELINE = json.loads((ROOT / 'tests/data/build-baseline.json').read_text())
+# An explicit runtime addition; all existing tool/PDK revisions remain unchanged.
+PYTHON_ARGUMENTS = {
+    'PYTHON_VERSION': '3.11.18',
+    'PYTHON_SOURCE_SHA256': '9120e0a653868f6e3698d36cdd99e5a58903ec9469e448f21d98f7b16d8fa290',
 }
 
 
 class RepositoryContract(unittest.TestCase):
-    def baseline(self, path):
-        return subprocess.check_output(
-            ['git', 'show', f'{BASELINE}:{path}'], cwd=ROOT, text=True)
-
     def test_tool_pins_are_unchanged(self):
-        before = json.loads(self.baseline('manifest.json'))
+        # A checked-in snapshot works in shallow clones and source archives too.
+        before = BASELINE['manifest']
         after = json.loads((ROOT / 'manifest.json').read_text())
-        self.assertTrue(GNUCAP_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
-        expected_arguments = {**before['build']['arguments'], **GNUCAP_ARGUMENTS}
+        self.assertTrue(PYTHON_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
+        expected_arguments = {**before['build']['arguments'], **PYTHON_ARGUMENTS}
         self.assertEqual(expected_arguments, after['build']['arguments'])
+        self.assertEqual(after['librelaneTemplates'], {
+            key: before['librelaneTemplates'][key] for key in ('ihp', 'gf')})
         self.assertEqual(after['build']['target'], 'ac3e-ic-toolbox')
         self.assertEqual(before['image']['registry'], after['image']['registry'])
         self.assertEqual(after['image']['namespace'], 'isaiash')
         self.assertEqual(after['image']['name'], 'ac3e-ic-toolbox')
 
     def test_no_new_tool_stages_or_final_copies(self):
-        before = self.baseline('Dockerfile')
         after = (ROOT / 'Dockerfile').read_text()
         stages = lambda text: re.findall(r'^FROM .* AS (\S+)', text, re.M)
         copies = lambda text: [line.split() for line in text.splitlines()
                                if line.startswith('COPY --from=')]
-        expected_stages = stages(before)[:-2]
-        expected_stages.insert(expected_stages.index('xyce'), 'gnucap')
-        expected_stages[expected_stages.index('magic'):expected_stages.index('magic')] = [
-            'heavyweight_builder', 'openroad_dependencies']
-        expected_stages[expected_stages.index('open_pdks'):expected_stages.index('open_pdks')] = [
-            'pdk_builder', 'sky130_pdk', 'gf180_pdk']
-        # The final two stages are renamed, not new tools or a separate Nix variant.
-        self.assertEqual(stages(after)[:-2], expected_stages)
-        self.assertEqual(stages(after)[-2:], ['ac3e-ic-toolbox-base', 'ac3e-ic-toolbox'])
-        expected_copies = copies(before)
-        ngspice_copy = ['COPY', '--from=ngspice', '${TOOLS}/ngspice', '${TOOLS}/ngspice']
-        expected_copies.insert(expected_copies.index(ngspice_copy) + 1,
-                               ['COPY', '--from=gnucap', '${TOOLS}/gnucap', '${TOOLS}/gnucap'])
-        # Explicit structural additions only: retain the final tool inventory and
-        # copy the entire PDK roots so Volare-relative links remain resolvable.
-        expected_copies[:0] = [
-            ['COPY', '--from=sky130_pdk', '${PDK_ROOT}', '${PDK_ROOT}'],
-            ['COPY', '--from=gf180_pdk', '${PDK_ROOT}', '${PDK_ROOT}'],
-        ]
-        common_copy = expected_copies.index(
-            ['COPY', '--from=builder', '${TOOLS}/common', '${TOOLS}/common'])
-        expected_copies[common_copy][1] = '--from=openroad_dependencies'
+        expected_stages = list(BASELINE['stages'])
+        expected_stages.remove('sky130_pdk')
+        expected_stages.insert(expected_stages.index('base'), 'python_builder')
+        self.assertEqual(stages(after), expected_stages)
+        expected_copies = [row for row in BASELINE['copies']
+                           if row[1] != '--from=sky130_pdk']
+        expected_copies.insert(0, ['COPY', '--from=python_builder', '/opt/python', '/opt/python'])
         self.assertEqual(copies(after), expected_copies)
 
     def test_runtime_config_is_installed_once(self):

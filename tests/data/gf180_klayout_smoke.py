@@ -2,6 +2,20 @@ import os
 from pathlib import Path
 import sys
 import pya
+
+# PATH selects user Python 3.11, but this macro runs in the .deb's libpython3.10.
+assert sys.version_info[:2] == (3, 10), sys.version
+import numpy
+import gdsfactory
+from gdsfactory.typings import Float2, LayerSpec
+pcell_site = Path('/opt/klayout-pcells/lib/python3.10/site-packages')
+for module in (numpy, gdsfactory):
+    assert Path(module.__file__).resolve().is_relative_to(pcell_site), module.__file__
+assert not any('/opt/eda-venv' in p or 'python3.11' in p for p in sys.path), sys.path
+print('KLayout embedded Python:', sys.version)
+from importlib.metadata import version
+print('PCell dependencies:', numpy.__version__, version('gdsfactory'))
+
 assert os.environ['GF_PDK_OPTION'] == 'D'
 k = Path(os.environ['PDKPATH']) / 'libs.tech/klayout'
 tech = pya.Technology()

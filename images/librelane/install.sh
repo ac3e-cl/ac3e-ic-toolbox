@@ -9,7 +9,7 @@ source /home/designer/.nix-profile/etc/profile.d/nix.sh
 rows_text=$(python3 - "$manifest" <<'PY'
 import json, re, sys
 pins = json.load(open(sys.argv[1]))['librelaneTemplates']
-assert set(pins) == {'ihp', 'gf', 'sky'}, 'Expected all three template pins'
+assert set(pins) == {'ihp', 'gf'}, 'Expected IHP and GF template pins only'
 for key, value in pins.items():
     for field in ('commit', 'librelaneCommit', 'pdkCommit'):
         assert re.fullmatch('[0-9a-f]{40}', value[field]), (key, field)
@@ -17,35 +17,12 @@ for key, value in pins.items():
 PY
 )
 mapfile -t rows <<< "$rows_text"
-[[ ${#rows[@]} == 3 ]] || { echo 'Expected all three template pins' >&2; exit 1; }
+[[ ${#rows[@]} == 2 ]] || { echo 'Expected IHP and GF template pins only' >&2; exit 1; }
 for row in "${rows[@]}"; do
     IFS=$'\t' read -r key url commit librelane_commit pdk_commit <<< "$row"
     git clone --no-checkout "$url" "$root/src/$key"
     git -C "$root/src/$key" checkout --detach "$commit"
     git -C "$root/src/$key" submodule update --init --recursive
-    if [[ "$key" == sky ]]; then
-        tools_row=$(python3 - "$manifest" <<'PY'
-import json, re, sys
-pin = json.load(open(sys.argv[1]))['librelaneTemplates']['sky']
-assert re.fullmatch('[0-9a-f]{40}', pin['supportToolsCommit'])
-print(pin['supportToolsUrl'] + '\t' + pin['supportToolsCommit'])
-PY
-)
-        IFS=$'\t' read -r tools_url tools_commit <<< "$tools_row"
-        git clone --no-checkout "$tools_url" "$root/src/sky/tt"
-        git -C "$root/src/sky/tt" checkout --detach "$tools_commit"
-        git -C "$root/src/sky/tt" submodule update --init --recursive
-        cp -a "$(dirname -- "${BASH_SOURCE[0]}")/sky" "$root/sky"
-        python3 - "$root/sky/flake.lock" "$librelane_commit" <<'PY'
-import json, sys
-assert json.load(open(sys.argv[1]))['nodes']['librelane']['locked']['rev'] == sys.argv[2]
-PY
-        env -u BASH_ENV -u PYTHONPATH -u LD_LIBRARY_PATH \
-            bash "$root/sky/bootstrap.sh" "$root/sky-env" "$root/src/sky/tt" "$root/src/sky"
-        printf 'source %q\n' "$root/sky-env/activate.sh" > "$root/activate/sky.sh"
-        "$root/sky-env/run" ciel enable --pdk-family sky130 --pdk-root "$root/pdks/sky" "$pdk_commit"
-        continue
-    fi
     python3 - "$root/src/$key" "$librelane_commit" "$pdk_commit" <<'PY'
 import json, pathlib, re, sys
 root = pathlib.Path(sys.argv[1])

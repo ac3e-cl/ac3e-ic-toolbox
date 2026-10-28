@@ -3,7 +3,7 @@ set_pdk() {
     if (( $# == 0 )); then
         printf 'Usage: sak-pdk <pdk> [<stdcell-lib>]\nAvailable PDKs:\n'
         local candidate
-        for candidate in ihp-sg13g2 sky130A gf180mcuD; do
+        for candidate in ihp-sg13g2 gf180mcuD; do
             [[ ! -d "${PDK_ROOT:-/opt/pdks}/$candidate" ]] || printf '%s\n' "$candidate"
         done
         return 0
@@ -15,7 +15,6 @@ set_pdk() {
     local selected="$1" library root="${PDK_ROOT:-/opt/pdks}"
     case "$selected" in
         ihp-sg13g2) library=sg13g2_stdcell ;;
-        sky130A) library=sky130_fd_sc_hd ;;
         gf180mcuD) library=gf180mcu_fd_sc_mcu7t5v0 ;;
         *) printf 'Unsupported PDK: %s\n' "$selected" >&2; return 2 ;;
     esac

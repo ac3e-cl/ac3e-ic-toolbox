@@ -12,6 +12,41 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class IntegrationRunner(unittest.TestCase):
+    def test_repository_long_suite_selects_only_retained_templates(self):
+        exclusions = json.loads((ROOT / 'tests/exclusions.json').read_text())
+        names = {'pdk/librelane-template-ihp.sh', 'pdk/librelane-template-gf.sh'}
+        sky = 'pdk/librelane-template-sky.sh'
+        self.assertEqual(set(exclusions['long_running']), names | {sky})
+        bodies = {name: 'exit 0\n' for name in names}
+        bodies[sky] = 'exit 89\n'
+        result, rows = self.run_fixture(bodies,
+                                        exclusions=exclusions, full=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual({row['test'] for row in rows if row['status'] == 'PASS'}, names)
+        self.assertEqual([row['status'] for row in rows if row['test'] == sky], ['EXCLUDED'])
+
+    def test_sky_tests_are_preserved_and_excluded_without_execution(self):
+        exclusions = json.loads((ROOT / 'tests/exclusions.json').read_text())
+        names = ('pdk/ngspice-sky130-mosfet.sh', 'pdk/librelane-template-sky.sh',
+                 'pdk/librelane-smoke.sh')
+        for path in ('pdk/ngspice-sky130-mosfet.sh', 'pdk/librelane-template-sky.sh',
+                     'data/sky130_nmos_op.spice', 'pdk/librelane-smoke.sh'):
+            with self.subTest(path=path):
+                self.assertTrue((ROOT / 'tests' / path).is_file())
+        bodies = {name: 'exit 89\n' for name in names}
+        result, rows = self.run_fixture(bodies, exclusions=exclusions)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(rows), len(names))
+        self.assertTrue(all(row['status'] == 'EXCLUDED' for row in rows))
+        for name in names:
+            self.assertIn('temporarily', exclusions['tests'][name].lower())
+        self.assertIn('    sky)', (ROOT / 'tests/helpers/librelane-template-test.sh').read_text())
+        for path in ('inventory/tools.sh', 'pdk/pdk-environment.sh'):
+            with self.subTest(path=path):
+                self.assertNotIn('sky', (ROOT / 'tests' / path).read_text().lower())
+        inventory = (ROOT / 'tests/inventory/tools.sh').read_text()
+        self.assertIn('gf180mcuD/libs.tech/ngspice/sm141064.ngspice', inventory)
+
     def run_fixture(self, bodies, timeout: str | None = '5', exclusions=None, trace_timeout=False, full=False):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
             root = Path(tmp)

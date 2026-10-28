@@ -19,7 +19,7 @@ This is interface compatibility, not a clone of upstream's complete tool suite.
 | `/foss/designs` | Link to the same project mount, not a second copy |
 | `/foss/tools`, `/foss/pdks`, `/headless` | Links to `/opt`, `/opt/pdks`, `/home/designer` |
 | `sak-pdk`, `set_pdk` | Two interfaces to one Bash selector, optional installed standard-cell library |
-| PDKs | Exactly `ihp-sg13g2`, `sky130A`, `gf180mcuD`; GF A/B/C and additional upstream PDKs are not public |
+| PDKs | Exactly `ihp-sg13g2`, `gf180mcuD`; SKY130, GF A/B/C and additional upstream PDKs are not public |
 | `.designinit` | Trusted Bash hook from `$DESIGNS`, loaded once per shell; failures propagate |
 | GUI/network | Loopback service ports, no global X permission changes or privilege escalation |
 | Runtime portability | Linux amd64 validation; Windows through WSL2, macOS experimental; no claim of Podman/Distrobox/arm64 validation |

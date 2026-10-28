@@ -15,7 +15,8 @@ class Integration(unittest.TestCase):
         text = (ROOT / 'tests/run_all.sh').read_text()
         self.assertIn('find analog digital gui inventory pdk', text)
         names = ['layout-extraction.sh', 'klayout-ihp-drc.sh',
-                 'ngspice-ihp-mosfet.sh', 'librelane-smoke.sh',
+                 'ngspice-ihp-mosfet.sh',
+                 'librelane-template-ihp.sh', 'librelane-template-gf.sh',
                  'pdk-environment.sh', 'ngspice-gf180-mosfet.sh',
                  'klayout-gf180-tech.sh', 'librelane-gf180-smoke.sh']
         for name in names:

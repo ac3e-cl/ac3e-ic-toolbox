@@ -7,7 +7,7 @@ prepare_open_pdks() {
     local pdk_family="$1"
 
     case "$pdk_family" in
-        sky130|gf180mcu)
+        gf180mcu)
             ;;
         *)
             echo "Unsupported PDK family: $pdk_family" >&2

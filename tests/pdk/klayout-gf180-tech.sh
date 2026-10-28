@@ -9,8 +9,11 @@ require_command klayout
 RUN_DIR="$TEST_ROOT/run/klayout-gf180-tech"
 mkdir -p "$RUN_DIR"
 export GF_GDS_OUTPUT="$RUN_DIR/nfet.gds"
+# Reject stale output if KLayout logs a Python error but returns success.
+rm -f "$GF_GDS_OUTPUT"
 # The installed PCells use temporary GDS files relative to cwd.
 cd "$RUN_DIR"
 klayout -b -r "$TEST_ROOT/data/gf180_klayout_smoke.py" >"$RUN_DIR/klayout.log" 2>&1
 test -s "$GF_GDS_OUTPUT"
+grep -q 'GF180 nfet PCell GDS:' "$RUN_DIR/klayout.log"
 pass "GF180 technology and nfet PCell geometry"

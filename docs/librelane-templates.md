@@ -1,6 +1,11 @@
 # LibreLane: isolated upstream templates with Nix
 
-The global toolbox LibreLane installation and `/opt/pdks` remain unchanged.
+The image retains global LibreLane and the IHP/GF PDKs under `/opt/pdks`.
+SKY130 and the Tiny Tapeout SKY template, adapter, private PDK and environment
+are temporarily excluded for image-size analysis, with reintroduction planned
+for a later release. SKY tests and their fixtures/helpers remain in the repository
+but are skipped in both regular and full suites through `tests/exclusions.json`.
+There is one image, not a separate image per PDK.
 For template work, use `librelane-template`, which selects a separately recorded
 Nix development shell and PDK root. Do not combine these templates with the
 global LibreLane executable or the analog PDKs merely because the PDK names match.
@@ -27,24 +32,9 @@ they do not invoke Nix, download packages, update locks or replace the global
 Nix profile. This also supports arbitrary numeric UID/GID launchers: running
 `nix develop` itself would require write access to this single-user Nix database.
 
-SKY has no upstream Nix flake. Its adapter under `images/librelane/sky/` pins
-LibreLane **3.0.14** to the revision selected by the template's `ttsky26d` GDS
-action, including that LibreLane revision's Nix inputs. It builds LibreLane with
-Nix for Python 3.11 and installs the unchanged support-tools/test requirements in
-a private venv; **LibreLane itself is not installed with pip**. Python 3.11 is
-needed for support-tools' `numpy==1.26.4`. The binding KLayout wheel is hash-pinned
-as a Nix derivation; Yosys and OpenROAD retain their separate embedded-Python
-dependencies. The bootstrap exercises imports in both embedded interpreters,
-not just in the LibreLane venv.
-The venv is intentionally not relocatable; install it at its final image path.
-The SKY adapter currently targets **x86_64 Linux**. Its private compatibility
-requirements pin cryptography 45.0.7 to satisfy upstream's cffi 1.17.1 and add
-wheel 0.45.1 for libparse; `pip check` must pass before installation succeeds.
-
 | Key | PDK | Upstream template |
 | --- | --- | --- |
 | `ihp` | `ihp-sg13g2` | [IHP SG13 LibreLane](https://github.com/IHP-GmbH/ihp-sg13-librelane-template) |
-| `sky` | `sky130A` | [Tiny Tapeout SKY Verilog](https://github.com/TinyTapeout/ttsky-verilog-template) |
 | `gf` | `gf180mcuD` | [wafer.space GF180MCU](https://github.com/wafer-space/gf180mcu-project-template) |
 
 Installed resources are under `/opt/librelane-templates/`: `src/<key>` contains
@@ -53,9 +43,6 @@ the upstream checkout, `profiles/<key>` the GC-rooted recorded shell,
 private Ciel root. These PDKs are deliberately separate from `/opt/pdks` and are
 not modified by `sak-pdk`. The additional Nix closures and PDKs increase image
 size and build/download time.
-SKY uses `sky-env/nix` as its rooted Nix package environment and `sky-env/venv`
-for support-tools; its adapter lock is kept under `sky/flake.lock` rather than
-inventing an upstream template lock.
 
 ## Use inside the container
 
@@ -71,12 +58,6 @@ librelane-template init gf /foss/designs/gf-example
 librelane-template run gf /foss/designs/gf-example make sim
 librelane-template run gf /foss/designs/gf-example make librelane
 librelane-template run gf /foss/designs/gf-example make sim-gl
-
-librelane-template init sky /foss/designs/sky-example
-librelane-template run sky /foss/designs/sky-example bash -c 'cd test; make'
-librelane-template run sky /foss/designs/sky-example python tt/tt_tool.py --create-user-config
-librelane-template run sky /foss/designs/sky-example python tt/tt_tool.py --harden --no-docker
-librelane-template run sky /foss/designs/sky-example python tt/tt_tool.py --create-tt-submission
 ```
 
 `init` refuses to overwrite an existing directory. Omit the command after the
@@ -89,17 +70,6 @@ IHP follows its upstream full-chip `librelane/config.yaml`, default SG13G2 varia
 and pinned Ciel PDK. GF follows its default `1x1` slot, 5 V SRAM configuration,
 `gf180mcu_fd_sc_mcu7t5v0` SCL and `gf180mcu_fd_io` pads. Optional upstream variants
 are not covered by the default integration tests.
-
-For SKY, support-tools is checked out under `tt/` at the manifest-pinned commit,
-not its floating `main` branch. `--no-docker` uses the Nix-provided toolchain
-directly. `--harden` deletes its previous `runs/wokwi` output, as upstream does.
-Before normal use, fill the empty title, author and description in `info.yaml`.
-Integration tests fill only these metadata fields with explicit test labels in
-their disposable copy; the installed template and upstream RTL remain unchanged.
-For gate-level testing, copy `tt_submission/<top_module>.v` to
-`test/gate_level_netlist.v`, select `PDK_ROOT` from `runs/wokwi/resolved.json`,
-then run `make GATES=yes` and `python -m cocotb_tools.check_results results.xml`
-inside `test/`. The integration test automates this and verifies both XML reports.
 
 ## Integration tests
 
@@ -123,12 +93,11 @@ is not enough.
 
 The verification policy is intentionally not strengthened silently: IHP disables
 `Checker.IllegalOverlap`; GF runs Magic DRC but treats its violations as advisory
-(`ERROR_ON_MAGIC_DRC: False`) and excludes CUP from the KLayout deck; Tiny Tapeout
-disables KLayout DRC and XOR in its generated configuration and runs its shuttle
-precheck separately in upstream CI. A passing template flow therefore does not
+(`ERROR_ON_MAGIC_DRC: False`) and excludes CUP from the KLayout deck.
+A passing template flow therefore does not
 mean that every possible rule deck passed. The integration tests do not add
 `--skip` or use the upstream `nodrc` targets.
-The complete GF, IHP and SKY template tests are excluded from the habitual suite
+The complete GF and IHP template tests are excluded from the habitual suite
 under `long_running` in `tests/exclusions.json`. Run `tests/test_all_full.sh`
 inside the container to execute only these long flows, or run an individual
 template script directly. All physical checks, including GF IR drop, remain
@@ -140,12 +109,12 @@ Inside an image built from this checkout, with `tests/` mounted at
 
 ```bash
 bash /home/designer/tests/pdk/librelane-template-ihp.sh
-bash /home/designer/tests/pdk/librelane-template-sky.sh
+
 # Optional full GF flow including IR drop (excluded from the suite):
 bash /home/designer/tests/pdk/librelane-template-gf.sh
 # Run all non-excluded repository integration tests:
 bash /home/designer/tests/run_all.sh
-# Explicit opt-in: run only the long GF/IHP/SKY template flows:
+# Explicit opt-in: run only the long GF/IHP template flows:
 bash /home/designer/tests/test_all_full.sh
 ```
 
@@ -159,30 +128,20 @@ Logs, the upstream lock, tool paths, simulation XML and `evidence/result.json`
 remain under each test's unique run directory. These checks are integration
 coverage, not manufacturing signoff or a substitute for shuttle-specific prechecks.
 
-### Completed local validation
+### Validation status after removing SKY
 
-Local image: `ac3e-librelane-templates-check:latest`, image ID
-`sha256:449ce2eefcaa376d31eada9b744fd098a603e77e0a7164e3d2231f15afe38703`.
+The prior focused installer-overlay validation is historical evidence,
+not validation of the current no-SKY image. That overlay had image ID
+`sha256:449ce2eefcaa376d31eada9b744fd098a603e77e0a7164e3d2231f15afe38703`;
+GF180 passed its complete flow and IHP was blocked by Magic DRC as described
+below. The retained template/LibreLane/PDK pins have not changed.
 
-| Template | RTL | GDS | Gate-level | Full-flow result |
-| --- | --- | --- | --- | --- |
-| SKY | PASS | Decoded successfully | PASS | PASS under the upstream verification policy |
-| GF180 | PASS | Decoded successfully | PASS | PASS; zero Magic DRC, KLayout DRC and LVS errors |
-| IHP | PASS | Decoded successfully | PASS | BLOCKED upstream: 2701 Magic DRC markers |
+The no-SKY image still needs a Docker build, ordinary integration suite and
+explicit long IHP/GF flows. Host contracts do not establish EDA runtime success
+or image-size savings. Generated historical evidence under
+`tests/run/librelane-template-audit/` is intentionally gitignored.
 
-SKY and GF180 completed end-to-end on this final image. The IHP full flow was
-run in its isolated, identically pinned Nix environment; its RTL/gate-level
-tests and GDS decoding were repeated on the final image. All three installed
-environments also passed activation, PDK access and writable-project probes
-with numeric UID/GID `12345`, without writable access to the Nix store.
-
-This is focused installer-overlay validation, not a full source rebuild of the
-entire toolbox. The machine-readable result is
-`tests/run/librelane-template-audit/summary.json`; complete per-run outputs
-remain under `tests/run/librelane-template-{sky,gf}/` and the IHP evidence
-directory below. Generated evidence is intentionally gitignored.
-
-### Known result for the pinned IHP example
+### Historical known result for the pinned IHP example
 
 With the manifest-pinned IHP template, LibreLane and PDK, the full example flow
 produced GDS and final metrics but **failed with 2701 Magic DRC errors**.

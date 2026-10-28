@@ -111,6 +111,8 @@ ARG LIBRELANE_REPO_URL
 ARG LIBRELANE_REPO_COMMIT
 ARG ENABLE_GUI
 ARG MAX_BUILD_JOBS
+ARG PYTHON_VERSION
+ARG PYTHON_SOURCE_SHA256
 
 #######################################################################
 # Basic configuration for base and builder
@@ -129,6 +131,20 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 USER root
 
+
+#######################################################################
+# Side-by-side user Python; Ubuntu's /usr/bin/python3 remains unchanged.
+#######################################################################
+FROM common AS python_builder
+ARG PYTHON_VERSION \
+    PYTHON_SOURCE_SHA256
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl xz-utils build-essential libssl-dev zlib1g-dev \
+    libbz2-dev libreadline-dev libsqlite3-dev libffi-dev liblzma-dev \
+    libgdbm-dev libgdbm-compat-dev libncursesw5-dev uuid-dev tk-dev && \
+    rm -rf /var/lib/apt/lists/*
+RUN --mount=type=bind,source=images/python,target=/images/python \
+    bash /images/python/install.sh
 
 #######################################################################
 # Setup base image
@@ -152,6 +168,9 @@ ENV NO_VNC_HOME=/usr/share/novnc \
 
 RUN --mount=type=bind,source=images/base,target=/images/base \
     bash /images/base/base_install.sh
+COPY --from=python_builder /opt/python /opt/python
+ENV EDA_VENV=/opt/eda-venv
+ENV PATH="${EDA_VENV}/bin:$PATH"
 RUN --mount=type=bind,source=images/base,target=/images/base \
     bash /images/base/python_packages.sh
 
@@ -216,7 +235,7 @@ RUN rm -rf /tmp/* /var/tmp/* && \
 
 
 #######################################################################
-# Compile magic (Requirement for sky130 pdk)
+# Compile magic (also required to build the GF180 PDK)
 #######################################################################
 FROM builder AS magic
 
@@ -239,14 +258,6 @@ ARG OPEN_PDKS_REPO_URL \
 
 RUN pip install --no-cache-dir volare==0.18.1
 
-FROM pdk_builder AS sky130_pdk
-RUN --mount=type=bind,source=images/pdks,target=/images/pdks \
-    cd /images/pdks/ \
-    && bash install_sky130.sh
-RUN --mount=type=bind,source=images/final_structure/configure,target=/images/final_structure/configure \
-    cd /images/final_structure/configure/ \
-    && bash patch_pdk_sky130.sh
-
 FROM pdk_builder AS gf180_pdk
 RUN --mount=type=bind,source=images/pdks,target=/images/pdks \
     cd /images/pdks/ \
@@ -258,7 +269,6 @@ RUN --mount=type=bind,source=images/final_structure/configure,target=/images/fin
 # Compatibility target. Copy whole roots, preserving Volare backing directories
 # and the relative public symlinks (in particular GF180 D's private A backing).
 FROM pdk_builder AS open_pdks
-COPY --from=sky130_pdk ${PDK_ROOT} ${PDK_ROOT}
 COPY --from=gf180_pdk ${PDK_ROOT} ${PDK_ROOT}
 
 #######################################################################

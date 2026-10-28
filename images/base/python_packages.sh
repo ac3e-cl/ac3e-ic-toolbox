@@ -1,13 +1,15 @@
 #!/bin/bash
 
-set -ex
+set -Eeuxo pipefail
 
-pip install uv
+/usr/bin/python3 -m pip install --no-cache-dir uv
+: "${EDA_VENV:=/opt/eda-venv}"
+uv venv --python /opt/python/bin/python3.11 --seed "$EDA_VENV"
 
 # Increase timeout for large package downloads
 export UV_HTTP_TIMEOUT=300
 
-uv pip install --system --strict --compile-bytecode \
+uv pip install --python "$EDA_VENV/bin/python" --strict \
     "numpy<2" \
     gdsfactory \
     glayout \
@@ -36,6 +38,10 @@ uv pip install --system --strict --compile-bytecode \
     click \
     "pygobject<3.52.0" \
     xdot
+
+uv pip check --python "$EDA_VENV/bin/python"
+"$EDA_VENV/bin/python" -m ipykernel install --prefix "$EDA_VENV" \
+    --name python311 --display-name 'Python 3.11 (EDA)'
 
 # Cleanup: Remove Python cache files
 find /usr/local -name "*.pyc" -delete 2>/dev/null || true

@@ -9,16 +9,6 @@
     "name": "ac3e-ic-toolbox"
   },
   "librelaneTemplates": {
-    "sky": {
-      "url": "https://github.com/TinyTapeout/ttsky-verilog-template",
-      "commit": "a42e6662fab316e93b4e26399e21d41664a460b7",
-      "librelaneCommit": "f24e0ea5db2260719e9a0c7d51d07db74a87fa23",
-      "pdk": "sky130A",
-      "pdkCommit": "8afc8346a57fe1ab7934ba5a6056ea8b43078e71",
-      "supportToolsUrl": "https://github.com/TinyTapeout/tt-support-tools",
-      "supportToolsCommit": "01d5d2814fa9dd61e9d211e0b235a4a592a9316a",
-      "gdsActionCommit": "395eedb3eeec3c2f4961c3b04ff2cf87f5525636"
-    },
     "ihp": {
       "url": "https://github.com/IHP-GmbH/ihp-sg13-librelane-template",
       "commit": "23c62045bb212175c20d8186a7ab308e15fba98c",
@@ -40,6 +30,8 @@
       "BASE_IMAGE": "ubuntu:22.04",
       "ENABLE_GUI": "",
       "MAX_BUILD_JOBS": "2",
+      "PYTHON_VERSION": "3.11.18",
+      "PYTHON_SOURCE_SHA256": "9120e0a653868f6e3698d36cdd99e5a58903ec9469e448f21d98f7b16d8fa290",
       "NGSPICE_REPO_URL": "https://github.com/danchitnis/ngspice-sf-mirror",
       "NGSPICE_REPO_COMMIT": "ngspice-46",
       "NGSPICE_NAME": "ngspice",

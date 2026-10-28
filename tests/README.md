@@ -5,7 +5,7 @@ Inside the EDA container, run `bash /home/designer/tests/run_all.sh`, or run
 it does not call Docker or require the repository's `runtime/` directory.
 Run `bash /home/designer/tests/analog/netgen-lvs.sh` for one test.
 
-The complete GF, IHP and SKY template flows are long-running and excluded from
+The complete GF and IHP template flows are long-running and excluded from
 the habitual suite. Opt in to only these long tests with:
 
 ```bash
@@ -16,8 +16,7 @@ The shared runner preserves timeouts and continues after failures. Long-suite
 logs and summary go to `run/full/`, separately from the habitual `run/` reports.
 `exclusions.json` lists this selection under `long_running`; hard exclusions
 under `tests` remain respected even in the long suite. Each template retains a
-14400-second deadline, overridable with `TEST_TIMEOUT`. SKY is classified by its
-full hardening/submission workload, not a measured runtime guarantee.
+14400-second deadline, overridable with `TEST_TIMEOUT`.
 
 Only `tests/` needs to mount at `/home/designer/tests` for the suite.
 The inventory check lists expected commands/resources directly; `manifest.json`
@@ -31,7 +30,7 @@ The runner discovers shell tests in the five category directories, continues
 after failures, enforces a per-test deadline (`TEST_TIMEOUT`, default 900 seconds),
 and prints the final per-test summary. Missing programs and timeouts fail unless
 explicitly excluded. `exclusions.json` records user-authorized exclusions for
-the Xyce and ORFS tests, the expensive GF/IHP/SKY template flows, and the
+the Xyce and ORFS tests, the temporarily disabled SKY tests, the expensive GF/IHP template flows, and the
 Xyce/MCY inventory entries. Run
 `bash /home/designer/tests/pdk/librelane-template-gf.sh` manually for the complete
 GF180 template flow, including IR drop, RTL/gate-level simulation and GDS checks.
@@ -62,12 +61,12 @@ entry should show `w/lf`. No global Git configuration change is required.
 
 | Manifest tool | Functional check |
 | --- | --- |
-| ngspice | NMOS operating points using IHP, Sky130 and GF180 models |
+| ngspice | NMOS operating points using IHP and GF180 models |
 | Xyce | Three-point resistor-divider DC sweep with numeric assertions |
 | Open PDKs / IHP PDK | Environment, installed technologies/models; simulation, extraction, DRC and GF180 PCell geometry |
 | Magic | GDS read and extraction of resistors/capacitors |
 | OpenVAF | Compile Verilog-A resistor, load OSDI in ngspice and verify current |
-| KLayout | IHP active-layer DRC report and GF180 PCell GDS |
+| KLayout | IHP active-layer DRC report; embedded Python 3.10 and isolated numpy/gdsfactory imports; GF180 PCell GDS |
 | Xschem | Netlist a connected resistor schematic |
 | Netgen | Accept matching netlists and reject a topology mismatch |
 | gaw3-xschem | Load, plot, export numeric waveform and decode rendered PNG |
@@ -82,9 +81,21 @@ entry should show `w/lf`. No global Git configuration change is required.
 | OpenROAD | Create database, write DEF/ODB and validate ODB round trip |
 | ORFS | Actual Nangate45 synthesis target with mapped-netlist assertions |
 | Nix | Offline expression evaluation with result assertion |
-| LibreLane | Built-in smoke test and GF180 counter flow with final metrics/GDS |
+| LibreLane | Explicit GF180 counter flow with final metrics/GDS; opt-in complete IHP/GF template flows |
 
 Trilinos is Xyce's build dependency, not a separate runtime application.
+SKY130 simulation, Tiny Tapeout SKY integration scripts, fixtures and helper code
+are preserved. SKY is temporarily excluded from the image for space analysis,
+with reintroduction planned for a later release. The three SKY-dependent shell
+tests (`ngspice-sky130-mosfet.sh`, `librelane-template-sky.sh` and
+`librelane-smoke.sh`, which defaults to SKY130) are hard-excluded in
+`exclusions.json`: both regular and full suites report them as `EXCLUDED`, never
+as passes. The adapter's host tests in `images/librelane/sky/test_bootstrap.py`
+are retained with an explicit `unittest.skip` while its installer is absent.
+`pdk/librelane-gf180-smoke.sh` retains a complete
+small counter flow using explicit GF180 settings and final-output assertions.
+The no-SKY image still requires a build and container integration validation;
+host contract tests are not runtime EDA evidence.
 GTKWave is currently supplied by apt rather than the commented source-build
 stage. The inventory records installed executable paths, not proof that all
 floating apt/Python/Nix packages match a source revision.

@@ -170,7 +170,7 @@ Example prompts after connecting:
 > output artifacts and read the text report. Do not treat exit code zero as
 > proof that the layout passes DRC unless the report confirms it.
 
-> Start the LibreLane flow from `counter/config.json` using `sky130A` with
+> Start the LibreLane flow from `counter/config.json` using `gf180mcuD` with
 > a 7200-second timeout. Poll progress and report errors or final artifacts.
 
 Inputs to the original convenience runners must exist under the workspace;
