@@ -38,6 +38,9 @@ _ac3e_setup() {
         done
         export PATH="$python_bin${python_path:+:$python_path}"
     fi
+    if [[ -d /opt/ac3e-ic-toolbox/bin ]]; then
+        export PATH="/opt/ac3e-ic-toolbox/bin:$PATH"
+    fi
     for tool in cvc_rv gaw3-xschem gnucap iverilog magic netgen ngspice openvaf verilator xschem yosys openroad; do
         for directory in "$TOOLS/$tool"/*/bin; do
             [[ ! -d "$directory" ]] || _ac3e_path_add PATH "$directory"

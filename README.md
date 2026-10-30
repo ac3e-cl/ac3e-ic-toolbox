@@ -85,6 +85,11 @@ For the IHP and wafer.space GF180 upstream templates, use
 the separately pinned Nix environments and private PDKs described in
 [LibreLane template workflows and tests](docs/librelane-templates.md).
 The global LibreLane installation and IHP/GF analog PDKs remain available.
+The `librelane` launcher uses the selected local PDK (`sak-pdk ihp-sg13g2`
+or `sak-pdk gf180mcuD`) without Ciel downloads by default. Run
+`librelane --smoke-test` to exercise it. Explicit `--ciel-pdk`/`--volare-pdk`
+options retain upstream managed-PDK behavior. Python 3.11 remains the user
+default; LibreLane and its subprocesses use their isolated Nix Python and tools.
 **SKY130 and the Tiny Tapeout SKY template are temporarily excluded** from this
 single image to analyze their impact on image size. Their reintroduction is
 planned for a later release after this space analysis. SKY tests, fixtures and

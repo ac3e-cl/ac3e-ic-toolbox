@@ -651,6 +651,11 @@ RUN --mount=type=bind,source=images/librelane,target=/images/librelane \
     --mount=type=bind,source=manifest.json,target=/images/manifest.json \
     bash /images/librelane/install.sh /images/manifest.json
 
+# User Python remains 3.11; LibreLane and its subprocesses use the Nix closure.
+USER root
+COPY --chmod=755 images/librelane/librelane /opt/ac3e-ic-toolbox/bin/librelane
+USER designer
+
 # Note: yosys is already installed via the yosys stage, skip Nix installation to avoid rate limits
 # RUN source ~/.nix-profile/etc/profile.d/nix.sh && \
 #     nix profile install nixpkgs#yosys --extra-experimental-features "nix-command flakes"
