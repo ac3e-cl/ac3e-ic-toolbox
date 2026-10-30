@@ -22,7 +22,7 @@ class PatchBehavior(unittest.TestCase):
             (k / 'tech/gf180mcu.lyt').write_text('<technology>' + ''.join('<'+t+'></'+t+'>' for t in tags) + '</technology>')
             (k / 'tech/gf180mcu.lym').write_text('macro')
             (k / 'pymacros/efuse/efuse.gds').write_bytes(b'fixture resource, not an EDA result')
-            (k / 'pymacros/__init__.py').write_text('# fixture')
+            (k / 'pymacros/__init__.py').write_text('# fixture\nimport pya\n')
             (k / 'macros/gf180mcu_options.lym').write_text(';"C" ], 2)')
             (k / 'macros/drc_options.yml').write_text('variant: C')
             for folder in ['drc', 'lvs']:

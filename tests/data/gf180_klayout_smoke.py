@@ -16,6 +16,8 @@ print('KLayout embedded Python:', sys.version)
 from importlib.metadata import version
 print('PCell dependencies:', numpy.__version__, version('gdsfactory'))
 
+# open_pdks' selector is not an importable gdsfactory PDK module.
+assert os.environ['PDK'] == 'gf180mcuD'
 assert os.environ['GF_PDK_OPTION'] == 'D'
 k = Path(os.environ['PDKPATH']) / 'libs.tech/klayout'
 tech = pya.Technology()
@@ -30,6 +32,10 @@ assert (k / 'pymacros/cells/efuse/efuse.gds').stat().st_size > 0
 layout = pya.Layout()
 cell = layout.create_cell('nfet', 'gf180mcu', {'l': 0.28, 'w': 1.0})
 assert cell is not None and not cell.bbox().empty(), 'empty GF180 PCell'
+assert os.environ['PDK'] == 'gf180mcuD', 'PCell initialization changed PDK selector'
+assert os.environ['GF_PDK_OPTION'] == 'D'
+assert gdsfactory.get_active_pdk().name == 'generic'
+print('GF180 PCell backend:', gdsfactory.get_active_pdk().name)
 out = os.environ['GF_GDS_OUTPUT']
 layout.write(out)
 check = pya.Layout()
