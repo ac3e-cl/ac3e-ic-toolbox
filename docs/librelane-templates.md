@@ -124,6 +124,13 @@ The suite gives full template tests 14400 seconds each (other tests retain the
 The tests also set LibreLane's subprocess core limit (`_OPENLANE_MAX_CORES`),
 OpenMP thread count, and GF's KLayout worker limits: `--jobs` alone only bounds
 LibreLane's executor and does not bound every OpenROAD/STA subprocess.
+Run the IHP and GF full-chip tests sequentially on memory-constrained hosts;
+thread limits are not memory limits. In a probe of image `0.3.0` on a 16 GiB
+host with 4 GiB swap, concurrent runs caused the host OOM killer to terminate
+IHP's KLayout filler process at approximately 7 GiB anonymous RSS. LibreLane
+reported `Filler Generation: Interrupted (SIGKILL)`, not a DRC result. Check
+the host kernel log before attributing a SIGKILL to the template or installer;
+retry in isolation rather than disabling fill or physical checks.
 Logs, the upstream lock, tool paths, simulation XML and `evidence/result.json`
 remain under each test's unique run directory. These checks are integration
 coverage, not manufacturing signoff or a substitute for shuttle-specific prechecks.
@@ -136,10 +143,20 @@ not validation of the current no-SKY image. That overlay had image ID
 GF180 passed its complete flow and IHP was blocked by Magic DRC as described
 below. The retained template/LibreLane/PDK pins have not changed.
 
-The no-SKY image still needs a Docker build, ordinary integration suite and
-explicit long IHP/GF flows. Host contracts do not establish EDA runtime success
-or image-size savings. Generated historical evidence under
-`tests/run/librelane-template-audit/` is intentionally gitignored.
+The rebuilt no-SKY image
+`sha256:ea126a1a4c4a209134aad8bf90a21a4074201f20682c87a677f065f773e3c811`
+passed the regular integration suite offline: 23 PASS, no failures and seven
+existing exclusions. Both local-PDK smoke tests passed with user Python 3.11.
+The complete template flows were then executed sequentially and offline:
+GF passed, including RTL and gate-level simulation, final metrics and GDS;
+IHP completed implementation and LVS but failed with 2701 Magic DRC markers.
+No checks were disabled. See [the IHP investigation](ihp-template-drc-investigation.md)
+for isolated reproductions and comparison with the previous local image.
+Current full-flow evidence is under
+`tests/run/librelane-template-gf/run.14Hj6C9W/` and
+`tests/run/librelane-template-ihp/run.9FsoK7JP/`;
+historical evidence under `tests/run/librelane-template-audit/` is intentionally
+gitignored.
 
 ### Historical known result for the pinned IHP example
 
