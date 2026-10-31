@@ -111,6 +111,7 @@ ARG LIBRELANE_REPO_URL
 ARG LIBRELANE_REPO_COMMIT
 ARG ENABLE_GUI
 ARG MAX_BUILD_JOBS
+ARG PDK_BUILD_JOBS
 ARG PYTHON_VERSION
 ARG PYTHON_SOURCE_SHA256
 
@@ -259,6 +260,10 @@ ARG OPEN_PDKS_REPO_URL \
 RUN pip install --no-cache-dir volare==0.18.1
 
 FROM pdk_builder AS gf180_pdk
+# The volare/open_pdks gf180 build runs magic over large SRAM/IO layouts;
+# parallel jobs multiply that peak, so bound it independently of MAX_BUILD_JOBS.
+ARG PDK_BUILD_JOBS
+ENV PDK_BUILD_JOBS=${PDK_BUILD_JOBS}
 RUN --mount=type=bind,source=images/pdks,target=/images/pdks \
     cd /images/pdks/ \
     && bash install_gf180mcu.sh

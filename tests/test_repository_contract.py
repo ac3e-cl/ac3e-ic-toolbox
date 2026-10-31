@@ -11,6 +11,11 @@ PYTHON_ARGUMENTS = {
     'PYTHON_VERSION': '3.11.18',
     'PYTHON_SOURCE_SHA256': '9120e0a653868f6e3698d36cdd99e5a58903ec9469e448f21d98f7b16d8fa290',
 }
+# An explicit scheduling addition; the gf180 volare build gets its own job
+# budget because magic layout conversion peaks far above a compile job.
+PDK_JOB_ARGUMENTS = {
+    'PDK_BUILD_JOBS': '1',
+}
 
 
 class RepositoryContract(unittest.TestCase):
@@ -19,7 +24,9 @@ class RepositoryContract(unittest.TestCase):
         before = BASELINE['manifest']
         after = json.loads((ROOT / 'manifest.json').read_text())
         self.assertTrue(PYTHON_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
-        expected_arguments = {**before['build']['arguments'], **PYTHON_ARGUMENTS}
+        self.assertTrue(PDK_JOB_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
+        expected_arguments = {**before['build']['arguments'], **PYTHON_ARGUMENTS,
+                               **PDK_JOB_ARGUMENTS}
         self.assertEqual(expected_arguments, after['build']['arguments'])
         self.assertEqual(after['librelaneTemplates'], {
             key: before['librelaneTemplates'][key] for key in ('ihp', 'gf')})

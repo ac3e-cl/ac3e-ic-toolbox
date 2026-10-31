@@ -114,10 +114,12 @@ jobs:
         run: |
           set -Eeuo pipefail
           # Leave host headroom; memory-swap is RAM + swap, not extra swap.
-          # GOMEMLIMIT is a soft Go runtime budget, not a total RSS limit.
+          # GOMEMLIMIT is a soft Go runtime budget, not a total RSS limit;
+          # keep it below the container ceiling so compiler and PDK build
+          # subprocesses keep headroom when two heavy stages co-schedule.
           docker buildx create --name "${CI_BUILDER}" \
             --driver docker-container \
-            --driver-opt memory=10g,memory-swap=12g,env.GOMEMLIMIT=6GiB,env.GOGC=50 \
+            --driver-opt memory=10g,memory-swap=12g,env.GOMEMLIMIT=4GiB,env.GOGC=50 \
             --buildkitd-config build/ci-buildkit.toml
           docker buildx inspect --bootstrap "${CI_BUILDER}"
           docker version
@@ -133,6 +135,7 @@ jobs:
           BUILD_BUILDER: ${{ env.CI_BUILDER }}
           BUILD_MAX_PARALLELISM: "2"
           MAX_BUILD_JOBS: "2"
+          PDK_BUILD_JOBS: "1"
           BUILD_METADATA_FILE: ${{ runner.temp }}/build-metadata.json
         run: |
           set -Eeuo pipefail

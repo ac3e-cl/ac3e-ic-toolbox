@@ -20,6 +20,11 @@ build. Several simultaneous compilations each consume that allowance. Keep a
 conservative value on memory-constrained hosts, especially for OpenROAD and
 OR-Tools. More CPU threads can make a build slower if it starts swapping.
 
+PDK generation is budgeted separately: `PDK_BUILD_JOBS` bounds the jobs of the
+volare/open_pdks gf180 build (default 1). Its peak comes from magic converting
+large SRAM/IO layouts, not from compiler throughput, so it must not inherit the
+compiler allowance.
+
 Nix has its own scheduling: `max-jobs` is the number of derivations built at once,
 whereas `cores` controls the allowance within a derivation. Downloading a binary
 substitute is not accelerated by increasing compiler jobs.
@@ -71,10 +76,15 @@ retention tooling, without deleting manifests still referenced by release tags.
 
 CI sets a 10 GiB container memory ceiling and a 12 GiB combined RAM+swap ceiling,
 leaving host headroom on the existing runner without adding swap. BuildKit uses
-`GOMEMLIMIT=6GiB` and `GOGC=50` to reclaim Go-managed memory earlier. The Go budget
+`GOMEMLIMIT=4GiB` and `GOGC=50` to reclaim Go-managed memory earlier. The Go budget
 is soft and excludes compiler subprocesses and other non-Go allocations; the
 container limit is the hard backstop, not a guarantee that any workload fits.
-Solver concurrency and compiler jobs are each limited to two. Gzip level 1
+Solver concurrency and compiler jobs are each limited to two. Two heavy stages
+therefore share one memory ceiling: the gf180 PDK stage is not budgeted against
+a co-scheduled heavyweight compiler (BuildKit picks the pair, so a PDK build can
+sit next to Xyce/Trilinos or OpenROAD). The PDK stage's own jobs are bounded by
+`PDK_BUILD_JOBS=1`, and the Go budget is kept well below the ceiling so the
+non-Go subprocesses of both stages keep headroom. Gzip level 1
 reduces compression work; it is not itself a memory bound. Larger compressed
 layers and additional registry traffic are intentional tradeoffs.
 

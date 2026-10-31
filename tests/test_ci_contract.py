@@ -44,8 +44,9 @@ class CIContract(unittest.TestCase):
 
     def test_builder_is_bounded_and_removed_before_pull(self):
         text = (ROOT / '.github/workflows/docker-release.yml').read_text()
-        for setting in ('memory=10g', 'memory-swap=12g', 'env.GOMEMLIMIT=6GiB',
-                        'env.GOGC=50', 'MAX_BUILD_JOBS: "2"'):
+        for setting in ('memory=10g', 'memory-swap=12g', 'env.GOMEMLIMIT=4GiB',
+                        'env.GOGC=50', 'MAX_BUILD_JOBS: "2"',
+                        'PDK_BUILD_JOBS: "1"'):
             self.assertIn(setting, text)
         self.assertLess(text.index('docker buildx rm'), text.index('docker pull'))
         self.assertIn('build/_build_logs/*.log', text)
