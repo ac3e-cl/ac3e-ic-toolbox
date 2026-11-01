@@ -45,12 +45,26 @@ class CIContract(unittest.TestCase):
     def test_builder_is_bounded_and_removed_before_pull(self):
         text = (ROOT / '.github/workflows/docker-release.yml').read_text()
         for setting in ('memory=10g', 'memory-swap=12g', 'env.GOMEMLIMIT=4GiB',
-                        'env.GOGC=50', 'MAX_BUILD_JOBS: "2"',
+                        'env.GOGC=50', 'MAX_BUILD_JOBS: "1"',
                         'PDK_BUILD_JOBS: "1"'):
             self.assertIn(setting, text)
         self.assertLess(text.index('docker buildx rm'), text.index('docker pull'))
         self.assertIn('build/_build_logs/*.log', text)
         self.assertIn('build-metadata.json', text)
+
+    def test_ci_serializes_memory_heavy_builds(self):
+        import tomllib
+        config = tomllib.loads((ROOT / 'build/ci-buildkit.toml').read_text())
+        text = (ROOT / '.github/workflows/docker-release.yml').read_text()
+        self.assertEqual(config['worker']['oci']['max-parallelism'], 1)
+        self.assertIn('BUILD_MAX_PARALLELISM: "1"', text)
+        self.assertIn('MAX_BUILD_JOBS: "1"', text)
+
+    def test_diagnostics_capture_cgroup_oom_evidence(self):
+        text = (ROOT / '.github/workflows/docker-release.yml').read_text()
+        for counter in ('memory.events', 'memory.peak', 'memory.max',
+                        'memory.swap.max', 'memory.failcnt'):
+            self.assertIn(counter, text)
 
     def test_failure_logs_survive_until_upload(self):
         text = (ROOT / '.github/workflows/docker-release.yml').read_text()

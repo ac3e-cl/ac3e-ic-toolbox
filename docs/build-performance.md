@@ -79,14 +79,22 @@ leaving host headroom on the existing runner without adding swap. BuildKit uses
 `GOMEMLIMIT=4GiB` and `GOGC=50` to reclaim Go-managed memory earlier. The Go budget
 is soft and excludes compiler subprocesses and other non-Go allocations; the
 container limit is the hard backstop, not a guarantee that any workload fits.
-Solver concurrency and compiler jobs are each limited to two. Two heavy stages
-therefore share one memory ceiling: the gf180 PDK stage is not budgeted against
-a co-scheduled heavyweight compiler (BuildKit picks the pair, so a PDK build can
-sit next to Xyce/Trilinos or OpenROAD). The PDK stage's own jobs are bounded by
-`PDK_BUILD_JOBS=1`, and the Go budget is kept well below the ceiling so the
-non-Go subprocesses of both stages keep headroom. Gzip level 1
-reduces compression work; it is not itself a memory bound. Larger compressed
-layers and additional registry traffic are intentional tradeoffs.
+CI serializes build steps with `max-parallelism=1` in `build/ci-buildkit.toml`
+and the matching `BUILD_MAX_PARALLELISM=1` wrapper setting. It also overrides
+`MAX_BUILD_JOBS=1` and `PDK_BUILD_JOBS=1`: one stage at a time is insufficient
+if that stage itself launches multiple memory-heavy compilers. Local manifest
+defaults are unchanged. This trades build speed for lower aggregate memory;
+a single job can still exceed the available budget. The 360-minute GitHub job
+ceiling remains in place and must be checked against actual cold-build duration.
+Gzip level 1 reduces compression work; it is not itself a memory bound. Larger
+compressed layers and additional registry traffic are intentional tradeoffs.
+
+The diagnostic artifact includes periodic cgroup v2 `memory.events`,
+`memory.peak` (when supported), RAM/swap limits and cgroup v1 fallback counters,
+alongside host memory and kernel logs. Inspect `oom_kill` deltas to distinguish
+actual cgroup OOM kills from unrelated build failures. A live builder reporting
+`OOMKilled=false`, exit 255, or a Docker attach broken pipe alone cannot prove
+or exclude the OOM kill of a build subprocess.
 
 After export, CI saves the full build log and digest metadata, removes its
 disposable builder (including its cache) to release memory **and disk**, then

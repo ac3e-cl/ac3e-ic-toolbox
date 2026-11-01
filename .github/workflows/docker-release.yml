@@ -115,8 +115,8 @@ jobs:
           set -Eeuo pipefail
           # Leave host headroom; memory-swap is RAM + swap, not extra swap.
           # GOMEMLIMIT is a soft Go runtime budget, not a total RSS limit;
-          # keep it below the container ceiling so compiler and PDK build
-          # subprocesses keep headroom when two heavy stages co-schedule.
+          # keep it below the container ceiling to leave headroom for the
+          # serialized compiler and PDK build subprocesses.
           docker buildx create --name "${CI_BUILDER}" \
             --driver docker-container \
             --driver-opt memory=10g,memory-swap=12g,env.GOMEMLIMIT=4GiB,env.GOGC=50 \
@@ -133,8 +133,8 @@ jobs:
           BUILD_VERBOSE: "1"
           BUILD_OUTPUT: registry
           BUILD_BUILDER: ${{ env.CI_BUILDER }}
-          BUILD_MAX_PARALLELISM: "2"
-          MAX_BUILD_JOBS: "2"
+          BUILD_MAX_PARALLELISM: "1"
+          MAX_BUILD_JOBS: "1"
           PDK_BUILD_JOBS: "1"
           BUILD_METADATA_FILE: ${{ runner.temp }}/build-metadata.json
         run: |
@@ -147,6 +147,19 @@ jobs:
             free -h
             ps -C dockerd,buildkitd -o pid,comm,rss,vsz || true
             docker stats --no-stream "buildx_buildkit_${CI_BUILDER}0" || true
+            # OOMKilled=false on a live builder does not rule out a killed
+            # build child. Preserve cgroup counters, including cgroup v1.
+            docker exec "buildx_buildkit_${CI_BUILDER}0" sh -c '
+              for file in /sys/fs/cgroup/memory.events /sys/fs/cgroup/memory.peak \
+                /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.swap.max \
+                /sys/fs/cgroup/memory/memory.failcnt \
+                /sys/fs/cgroup/memory/memory.max_usage_in_bytes; do
+                if [ -r "$file" ]; then
+                  printf "\\n%s\\n" "$file"
+                  cat "$file"
+                fi
+              done
+            ' || true
           }
           monitor() {
             while true; do

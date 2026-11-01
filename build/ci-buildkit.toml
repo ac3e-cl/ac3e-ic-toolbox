@@ -1,3 +1,4 @@
-# CI-only solver concurrency; not an exporter memory limit.
+# Serialize CI build steps so independent heavy stages do not share the
+# builder's memory budget. This does not bound exporter memory.
 [worker.oci]
-  max-parallelism = 2
+  max-parallelism = 1
