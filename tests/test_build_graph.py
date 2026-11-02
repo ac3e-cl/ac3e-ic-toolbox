@@ -40,10 +40,11 @@ class BuildGraphTests(unittest.TestCase):
         self.assertIn("/images/ortools/install.sh", deps)
         self.assertIn("COPY --from=openroad_dependencies", graph["ac3e-ic-toolbox-base"][1])
 
-    def test_pdk_families_build_and_patch_independently(self):
+    def test_only_supported_pdk_family_is_built_and_patched(self):
         graph = stages()
+        self.assertNotIn('sky130_pdk', graph)
+        self.assertNotIn('install_sky130.sh', DOCKERFILE.read_text())
         for name, installer, patch in (
-            ("sky130_pdk", "install_sky130.sh", "patch_pdk_sky130.sh"),
             ("gf180_pdk", "install_gf180mcu.sh", "patch_pdk_gf180mcu.sh"),
         ):
             self.assertIn(name, graph)
@@ -54,7 +55,7 @@ class BuildGraphTests(unittest.TestCase):
         self.assertNotIn("python_packages.sh", graph["pdk_builder"][1])
         self.assertIn("volare==0.18.1", graph["pdk_builder"][1])
         self.assertEqual(graph["open_pdks"][0], "pdk_builder")
-        for name in ("sky130_pdk", "gf180_pdk"):
+        for name in ("gf180_pdk",):
             self.assertRegex(graph["open_pdks"][1], rf"COPY --from={name}\s+\$\{{PDK_ROOT\}}\s+\$\{{PDK_ROOT\}}")
 
 

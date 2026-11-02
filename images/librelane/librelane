@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Keep the Nix toolchain isolated from the user's default Python environment.
+set -euo pipefail
+profile=/home/designer/.nix-profile
+args=()
+managed=false
+for arg in "$@"; do
+    case "$arg" in
+        --volare-pdk|--ciel-pdk|--dockerized|--containerized) managed=true ;;
+    esac
+done
+if [[ "$managed" == false ]]; then
+    args+=(--manual-pdk)
+fi
+exec env -u BASH_ENV -u PYTHONPATH -u PYTHONHOME -u LD_LIBRARY_PATH \
+    PATH="$profile/bin:/usr/local/bin:/usr/bin:/bin" \
+    "$profile/bin/librelane" "${args[@]}" "$@"

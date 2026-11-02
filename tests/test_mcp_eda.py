@@ -26,6 +26,13 @@ def load_eda():
 
 
 class CatalogTests(unittest.TestCase):
+    def test_catalog_examples_use_retained_image_pdks(self):
+        catalog = load_eda().EDAMixin().tool_catalog()
+        librelane = next(tool for tool in catalog['tools'] if tool['name'] == 'librelane')
+        example = librelane['examples'][0]
+        self.assertEqual(example[example.index('--pdk') + 1], 'gf180mcuD')
+        self.assertNotIn('sky', str(catalog).lower())
+
     def test_catalog_covers_repository_inventory_with_honest_exclusions(self):
         module = load_eda()
         source = (ROOT / 'tests/inventory/tools.sh').read_text().split("<<'PY'\n", 1)[1].rsplit('\nPY', 1)[0]

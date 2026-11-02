@@ -4,8 +4,12 @@ export PATH="$(realpath "$TOOLS"/magic/*/bin):$PATH"
 source /images/pdks/prepare_open_pdks.sh
 prepare_open_pdks gf180mcu
 trap 'rm -rf "$OPEN_PDKS_SOURCE"' EXIT
-BUILD_JOBS=${MAX_BUILD_JOBS:-2}
-volare build --pdk=gf180mcu --use-repo-at "open_pdks=$OPEN_PDKS_SOURCE" -j "$BUILD_JOBS" "$OPEN_PDKS_REPO_COMMIT"
+# The volare gf180 build's memory peak comes from magic converting large
+# layouts, not from compiler throughput; several concurrent jobs can breach
+# the CI builder's memory ceiling next to unrelated heavy stages. Bound it
+# independently of the compiler budget and default to a single job.
+PDK_BUILD_JOBS=${PDK_BUILD_JOBS:-1}
+volare build --pdk=gf180mcu --use-repo-at "open_pdks=$OPEN_PDKS_SOURCE" -j "$PDK_BUILD_JOBS" "$OPEN_PDKS_REPO_COMMIT"
 volare enable --pdk=gf180mcu "$OPEN_PDKS_REPO_COMMIT"
 
 # open_pdks does not install the dropdown macros. Recover precisely the fd_pr

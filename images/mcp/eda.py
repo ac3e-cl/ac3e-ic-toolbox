@@ -29,7 +29,7 @@ _CATALOG = (
     ('vvp', 'Icarus compiled simulation runtime', ('Verilog simulation',), ['vvp', '/foss/designs/simulation.vvp']),
     ('gtkwave', 'Digital waveform viewer', ('waveform viewing', 'GUI'), ['gtkwave', '/foss/designs/wave.vcd']),
     ('openroad', 'RTL-to-GDS physical design engine', ('floorplanning', 'placement', 'routing', 'Tcl scripts'), ['openroad', '-exit', '/foss/designs/design.tcl']),
-    ('librelane', 'Automated ASIC implementation flow', ('RTL-to-GDS flow', 'manual PDK'), ['librelane', '--manual-pdk', '--pdk-root', '/opt/pdks', '--pdk', 'sky130A', '--design-dir', '.', '/foss/designs/config.json']),
+    ('librelane', 'Automated ASIC implementation flow', ('RTL-to-GDS flow', 'manual PDK'), ['librelane', '--manual-pdk', '--pdk-root', '/opt/pdks', '--pdk', 'gf180mcuD', '--design-dir', '.', '/foss/designs/config.json']),
     ('nix', 'Nix package and development environment manager', ('toolchain environments', 'package management'), ['nix', '--version']),
     ('sta', 'OpenSTA timing analysis command referenced by runtime config', ('static timing analysis', 'Tcl scripts'), ['sta', '-exit', '/foss/designs/timing.tcl']),
 )
@@ -261,7 +261,7 @@ class EDAMixin:
                             'status': 'excluded' if name in ('mcy', 'Xyce') else 'optional' if name == 'sta' else 'expected',
                             'available': None, 'notes': notes})
         return {'tools': entries, 'resources': [
-            {'name': 'open_pdks', 'description': 'Sky130/gf180 PDK resources, not an executable.'},
+            {'name': 'open_pdks', 'description': 'GF180MCU D PDK resources, not an executable.'},
             {'name': 'ihp-sg13g2', 'description': 'IHP SG13G2 PDK models and technology resources.'},
             {'name': 'OpenROAD-flow-scripts', 'description': 'ORFS make-based flow resources at ORFS_DIR; inventory does not validate compatibility.',
              'examples': [['make', '-C', '/opt/OpenROAD-flow-scripts/flow', 'DESIGN_CONFIG=/foss/designs/config.mk']]}],

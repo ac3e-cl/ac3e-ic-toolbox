@@ -1,0 +1,262 @@
+{
+  "sourceCommit": "7143e6b",
+  "manifest": {
+    "schemaVersion": 1,
+    "release": {
+      "version": "0.2.0"
+    },
+    "image": {
+      "registry": "docker.io",
+      "namespace": "isaiash",
+      "name": "ac3e-ic-toolbox"
+    },
+    "librelaneTemplates": {
+      "sky": {
+        "url": "https://github.com/TinyTapeout/ttsky-verilog-template",
+        "commit": "a42e6662fab316e93b4e26399e21d41664a460b7",
+        "librelaneCommit": "f24e0ea5db2260719e9a0c7d51d07db74a87fa23",
+        "pdk": "sky130A",
+        "pdkCommit": "8afc8346a57fe1ab7934ba5a6056ea8b43078e71",
+        "supportToolsUrl": "https://github.com/TinyTapeout/tt-support-tools",
+        "supportToolsCommit": "01d5d2814fa9dd61e9d211e0b235a4a592a9316a",
+        "gdsActionCommit": "395eedb3eeec3c2f4961c3b04ff2cf87f5525636"
+      },
+      "ihp": {
+        "url": "https://github.com/IHP-GmbH/ihp-sg13-librelane-template",
+        "commit": "23c62045bb212175c20d8186a7ab308e15fba98c",
+        "librelaneCommit": "c5b5099e55f4e3bed507f2e79441ecfd6432d65c",
+        "pdk": "ihp-sg13g2",
+        "pdkCommit": "7bbb4b5a5b64c446fedc64eacadc33fa65ade276"
+      },
+      "gf": {
+        "url": "https://github.com/wafer-space/gf180mcu-project-template",
+        "commit": "33e4b5ecc9faac82787fa7cb205f08377e27b912",
+        "librelaneCommit": "df37e133fc3426c16e8356b1f50a17f8d6082f60",
+        "pdk": "gf180mcuD",
+        "pdkCommit": "f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+      }
+    },
+    "build": {
+      "target": "ac3e-ic-toolbox",
+      "arguments": {
+        "BASE_IMAGE": "ubuntu:22.04",
+        "ENABLE_GUI": "",
+        "MAX_BUILD_JOBS": "2",
+        "NGSPICE_REPO_URL": "https://github.com/danchitnis/ngspice-sf-mirror",
+        "NGSPICE_REPO_COMMIT": "ngspice-46",
+        "NGSPICE_NAME": "ngspice",
+        "GNUCAP_REPO_URL": "https://codeberg.org/gnucap/gnucap.git",
+        "GNUCAP_REPO_COMMIT": "bcaff61b3c562179476bb6c5de783676994c61e1",
+        "GNUCAP_NAME": "gnucap",
+        "XYCE_REPO_URL": "https://github.com/Xyce/Xyce.git",
+        "XYCE_REPO_COMMIT": "Release-7.8.0",
+        "XYCE_TRILINOS_REPO_URL": "https://github.com/trilinos/Trilinos",
+        "XYCE_TRILINOS_REPO_COMMIT": "trilinos-release-12-12-1",
+        "XYCE_NAME": "xyce",
+        "OPEN_PDKS_REPO_URL": "https://github.com/RTimothyEdwards/open_pdks",
+        "OPEN_PDKS_REPO_COMMIT": "0fe599b2afb6708d281543108caf8310912f54af",
+        "OPEN_PDKS_NAME": "open_pdks",
+        "MAGIC_REPO_URL": "https://github.com/RTimothyEdwards/magic.git",
+        "MAGIC_REPO_COMMIT": "307e22af30f483bb52ec68118454002fb5864fe5",
+        "MAGIC_NAME": "magic",
+        "IHP_PDK_REPO_URL": "https://github.com/IHP-GmbH/IHP-Open-PDK.git",
+        "IHP_PDK_REPO_COMMIT": "cfc0e22b92306178ebb5a5bc4865afe3294654d0",
+        "IHP_PDK_REPO_BRANCH": "dev",
+        "IHP_PDK_NAME": "ihp-sg13g2",
+        "OPENVAF_REPO_URL": "https://github.com/iic-jku/OpenVAF.git",
+        "OPENVAF_REPO_COMMIT": "a9697ae7780518f021f9f64e819b3a57033bd39f",
+        "OPENVAF_DOWNLOAD": "https://openva.fra1.cdn.digitaloceanspaces.com/openvaf_23_5_0_linux_amd64.tar.gz",
+        "OPENVAF_NAME": "openvaf",
+        "KLAYOUT_REPO_URL": "https://github.com/KLayout/klayout",
+        "KLAYOUT_REPO_COMMIT": "v0.30.11",
+        "KLAYOUT_DOWNLOAD": "https://www.klayout.org/downloads/Ubuntu-22/klayout_0.30.11-1_amd64.deb",
+        "KLAYOUT_NAME": "klayout",
+        "XSCHEM_REPO_URL": "https://github.com/StefanSchippers/xschem.git",
+        "XSCHEM_REPO_COMMIT": "cfbeaf069db7c8872e501ad7963fcc291d83d944",
+        "XSCHEM_NAME": "xschem",
+        "NETGEN_REPO_URL": "https://github.com/RTimothyEdwards/netgen.git",
+        "NETGEN_REPO_COMMIT": "e1528a797cdb155d6ebf8d91c5a55ed7d1713156",
+        "NETGEN_NAME": "netgen",
+        "GAW3_XSCHEM_REPO_URL": "https://github.com/StefanSchippers/xschem-gaw.git",
+        "GAW3_XSCHEM_REPO_COMMIT": "640c672e1ad768b92eb6a15943459a1d2214e1dc",
+        "GAW3_XSCHEM_NAME": "gaw3-xschem",
+        "YOSYS_REPO_URL": "https://github.com/YosysHQ/yosys",
+        "YOSYS_REPO_COMMIT": "yosys-0.44",
+        "YOSYS_NAME": "yosys",
+        "YOSYS_EQY_REPO_URL": "https://github.com/YosysHQ/eqy.git",
+        "YOSYS_EQY_NAME": "yosys_eqy",
+        "YOSYS_SBY_REPO_URL": "https://github.com/YosysHQ/sby.git",
+        "YOSYS_SBY_NAME": "yosys_sby",
+        "YOSYS_MCY_REPO_URL": "https://github.com/YosysHQ/mcy.git",
+        "YOSYS_MCY_NAME": "yosys_mcy",
+        "CVC_RV_REPO_URL": "https://github.com/d-m-bailey/cvc",
+        "CVC_RV_REPO_COMMIT": "v1.1.5",
+        "CVC_RV_NAME": "cvc_rv",
+        "VERILATOR_REPO_URL": "https://github.com/verilator/verilator",
+        "VERILATOR_REPO_COMMIT": "cd693ce02b914151fcc761eaecd15af96d2006ad",
+        "VERILATOR_NAME": "verilator",
+        "IVERILOG_REPO_URL": "https://github.com/steveicarus/iverilog.git",
+        "IVERILOG_REPO_COMMIT": "25a84d5cfcecf67bfb7734929a1df98c4b137ce6",
+        "IVERILOG_NAME": "iverilog",
+        "GTKWAVE_REPO_URL": "https://github.com/gtkwave/gtkwave.git",
+        "GTKWAVE_REPO_COMMIT": "0a800de96255f7fb11beadb6729fdf670da76ecb",
+        "GTKWAVE_NAME": "gtkwave",
+        "OPENROAD_REPO_URL": "https://github.com/The-OpenROAD-Project/OpenROAD.git",
+        "OPENROAD_REPO_COMMIT": "ee9759486a31328ff8a8213131c3cd5f5fc7f39a",
+        "OPENROAD_NAME": "openroad",
+        "ORFS_REPO_URL": "https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts",
+        "ORFS_REPO_COMMIT": "40674dd5cf48db6dc9028d6ab5a98f107208f5bb",
+        "ORFS_NAME": "OpenROAD-flow-scripts",
+        "NIX_INSTALLER_URL": "https://nixos.org/nix/install",
+        "NIX_SUBSTITUTER_URL": "https://nix-cache.fossi-foundation.org",
+        "NIX_SUBSTITUTER_PUBLIC_KEY": "nix-cache.fossi-foundation.org:3+K59iFwXqKsL7BNu6Guy0v+uTlwsxYQxjspXzqLYQs=",
+        "LIBRELANE_REPO_URL": "https://github.com/librelane/librelane.git",
+        "LIBRELANE_REPO_COMMIT": "ca6adb1e2982cd75445a68b632d461213d8ca421"
+      }
+    }
+  },
+  "stages": [
+    "common",
+    "base",
+    "builder",
+    "heavyweight_builder",
+    "openroad_dependencies",
+    "magic",
+    "pdk_builder",
+    "sky130_pdk",
+    "gf180_pdk",
+    "open_pdks",
+    "openvaf",
+    "ihp_pdk",
+    "ngspice",
+    "gnucap",
+    "xyce",
+    "xschem",
+    "yosys",
+    "netgen",
+    "gaw",
+    "cvc_rv",
+    "verilator",
+    "iverilog",
+    "openroad_core",
+    "orfs",
+    "ac3e-ic-toolbox-base",
+    "ac3e-ic-toolbox"
+  ],
+  "copies": [
+    [
+      "COPY",
+      "--from=sky130_pdk",
+      "${PDK_ROOT}",
+      "${PDK_ROOT}"
+    ],
+    [
+      "COPY",
+      "--from=gf180_pdk",
+      "${PDK_ROOT}",
+      "${PDK_ROOT}"
+    ],
+    [
+      "COPY",
+      "--from=open_pdks",
+      "${PDK_ROOT}",
+      "${PDK_ROOT}"
+    ],
+    [
+      "COPY",
+      "--from=ihp_pdk",
+      "${PDK_ROOT}/${IHP_PDK_NAME}",
+      "${PDK_ROOT}/${IHP_PDK_NAME}"
+    ],
+    [
+      "COPY",
+      "--from=ihp_pdk",
+      "${PDK_ROOT}/versions.txt",
+      "${PDK_ROOT}/versions.txt"
+    ],
+    [
+      "COPY",
+      "--from=openroad_dependencies",
+      "${TOOLS}/common",
+      "${TOOLS}/common"
+    ],
+    [
+      "COPY",
+      "--from=ihp_pdk",
+      "${TOOLS}/openvaf",
+      "${TOOLS}/openvaf"
+    ],
+    [
+      "COPY",
+      "--from=ngspice",
+      "${TOOLS}/ngspice",
+      "${TOOLS}/ngspice"
+    ],
+    [
+      "COPY",
+      "--from=gnucap",
+      "${TOOLS}/gnucap",
+      "${TOOLS}/gnucap"
+    ],
+    [
+      "COPY",
+      "--from=xschem",
+      "${TOOLS}/xschem",
+      "${TOOLS}/xschem"
+    ],
+    [
+      "COPY",
+      "--from=magic",
+      "${TOOLS}/magic",
+      "${TOOLS}/magic"
+    ],
+    [
+      "COPY",
+      "--from=netgen",
+      "${TOOLS}/netgen",
+      "${TOOLS}/netgen"
+    ],
+    [
+      "COPY",
+      "--from=gaw",
+      "${TOOLS}/gaw3-xschem",
+      "${TOOLS}/gaw3-xschem"
+    ],
+    [
+      "COPY",
+      "--from=cvc_rv",
+      "${TOOLS}/cvc_rv",
+      "${TOOLS}/cvc_rv"
+    ],
+    [
+      "COPY",
+      "--from=verilator",
+      "${TOOLS}/verilator",
+      "${TOOLS}/verilator"
+    ],
+    [
+      "COPY",
+      "--from=iverilog",
+      "${TOOLS}/iverilog",
+      "${TOOLS}/iverilog"
+    ],
+    [
+      "COPY",
+      "--from=yosys",
+      "${TOOLS}/yosys",
+      "${TOOLS}/yosys"
+    ],
+    [
+      "COPY",
+      "--from=openroad_core",
+      "${TOOLS}/openroad",
+      "${TOOLS}/openroad"
+    ],
+    [
+      "COPY",
+      "--from=orfs",
+      "${TOOLS}/OpenROAD-flow-scripts",
+      "${TOOLS}/OpenROAD-flow-scripts"
+    ]
+  ]
+}

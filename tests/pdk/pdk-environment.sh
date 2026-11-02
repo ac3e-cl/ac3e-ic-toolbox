@@ -5,7 +5,7 @@ TEST_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$TEST_ROOT/common.sh"
 load_design_env
 require_command klayout
-for selected in ihp-sg13g2 sky130A gf180mcuD; do
+for selected in ihp-sg13g2 gf180mcuD; do
     sak-pdk "$selected"
     test "$PDKPATH" = "$PDK_ROOT/$PDK"
     test -d "$PDKPATH/libs.ref/$STD_CELL_LIBRARY"

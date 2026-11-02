@@ -27,7 +27,7 @@ commands = {
     'LIBRELANE_REPO_URL': 'librelane', 'NIX_INSTALLER_URL': 'nix',
 }
 resources = {
-    'OPEN_PDKS_NAME': ('open_pdks', Path(os.environ['PDK_ROOT']) / 'sky130A/libs.tech/ngspice/sky130.lib.spice'),
+    'OPEN_PDKS_NAME': ('open_pdks', Path(os.environ['PDK_ROOT']) / 'gf180mcuD/libs.tech/ngspice/sm141064.ngspice'),
     'IHP_PDK_NAME': ('ihp-sg13g2', Path(os.environ['PDK_ROOT']) / 'ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib'),
     'ORFS_NAME': ('OpenROAD-flow-scripts', Path(os.environ['ORFS_DIR']) / 'flow/Makefile'),
 }

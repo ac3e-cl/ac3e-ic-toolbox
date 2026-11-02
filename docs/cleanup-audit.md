@@ -18,7 +18,7 @@ CI and documentation using `git grep`; every file below was read before removal.
 | Obsolete temporary Docker stage | Empty descendant with no consumer; the current manifest targets `ac3e-ic-toolbox`, including Nix/LibreLane, above the intermediate `ac3e-ic-toolbox-base` stage |
 
 Retained: tool dependencies and optional Xyce/GTKWave installers, `draw_efuse.py`,
-`fix-tech-file.py`, IHP/Sky patches, notebooks, .mat files, GDS/schematics, original
+`fix-tech-file.py`, IHP/GF patches, notebooks, .mat files, GDS/schematics, original
 integration fixtures, other verification examples, images in README, policies,
 licenses, issue proposals and devcontainers. Lack of use in CI alone does not make
 teaching examples useless.

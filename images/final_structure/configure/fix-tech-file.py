@@ -62,45 +62,6 @@ def connectivity_validation(connectivity: Element):
         )
 
 
-def get_sky130_connectivity():
-    # https://skywater-pdk.readthedocs.io/en/main/rules/layers.html
-
-    def metal_connectivity(layer):
-        expr = f"{layer}/20"  # Drawing
-        expr += f"+{layer}/5"  # Label
-        expr += f"-{layer}/13"  # Res
-        return expr
-
-    connectivity = Element("connectivity")
-
-    connectivity.append(generate_symbol_element("capm", "89/44"))
-    connectivity.append(generate_symbol_element("cap2m", "97/44"))
-
-    connectivity.append(generate_symbol_element("poly", metal_connectivity(66)))
-    connectivity.append(generate_symbol_element("li", metal_connectivity(67)))
-    connectivity.append(generate_symbol_element("met1", metal_connectivity(68)))
-    connectivity.append(generate_symbol_element("met2", metal_connectivity(69)))
-    connectivity.append(generate_symbol_element("met3", metal_connectivity(70)))
-    connectivity.append(generate_symbol_element("met4", metal_connectivity(71)))
-    connectivity.append(generate_symbol_element("met5", metal_connectivity(72)))
-
-    connectivity.append(generate_symbol_element("licon", "66/44"))
-    connectivity.append(generate_symbol_element("mcon", "67/44"))
-    connectivity.append(generate_symbol_element("via1", "68/44"))
-    connectivity.append(generate_symbol_element("via2", "69/44"))
-    connectivity.append(generate_symbol_element("via3", "70/44-capm"))
-    connectivity.append(generate_symbol_element("via4", "71/44-cap2m"))
-
-    connectivity.append(generate_connection_element("poly", "licon", "li"))
-    connectivity.append(generate_connection_element("li", "mcon", "met1"))
-    connectivity.append(generate_connection_element("met1", "via1", "met2"))
-    connectivity.append(generate_connection_element("met2", "via2", "met3"))
-    connectivity.append(generate_connection_element("met3", "via3", "met4"))
-    connectivity.append(generate_connection_element("met4", "via4", "met5"))
-
-    return connectivity
-
-
 def get_gf180mcu_connectivity():
     connectivity = Element("connectivity")
 
@@ -153,24 +114,6 @@ def get_gf180mcu_connectivity():
     return connectivity
 
 
-def update_tech_file_sky130A(report: Element):
-    new_report = Element(report.tag)
-
-    new_report.append(generate_text_element("name", "sky130A"))
-    new_report.append(get_child_element(report, "description"))
-    new_report.append(get_child_element(report, "group"))
-    new_report.append(generate_text_element("dbu", "0.005"))
-    new_report.append(get_child_element(report, "base-path"))
-    new_report.append(get_child_element(report, "original-base-path"))
-    new_report.append(get_child_element(report, "layer-properties_file"))
-    new_report.append(get_child_element(report, "add-other-layers"))
-    new_report.append(get_child_element(report, "reader-options"))
-    new_report.append(get_child_element(report, "writer-options"))
-    new_report.append(get_sky130_connectivity())
-
-    return new_report
-
-
 def update_tech_file_gf180mcuD(report: Element):
     new_report = Element(report.tag)
 
@@ -191,13 +134,10 @@ def update_tech_file_gf180mcuD(report: Element):
 
 
 def main(tech_file: Path, pdk: str):
+    if pdk != "gf180mcuD":
+        raise ValueError(f"Unsupported PDK: {pdk}")
     etree = ET.parse(tech_file.resolve())
-
-    if pdk == "sky130A":
-        updated_tree = ET.ElementTree(update_tech_file_sky130A(etree.getroot()))
-
-    elif pdk == "gf180mcuD":
-        updated_tree = ET.ElementTree(update_tech_file_gf180mcuD(etree.getroot()))
+    updated_tree = ET.ElementTree(update_tech_file_gf180mcuD(etree.getroot()))
 
     ET.indent(updated_tree, space=" ")
     connectivity_validation(updated_tree)
@@ -227,8 +167,8 @@ if __name__ == "__main__":
         "--pdk",
         help="Specifies which modifications should be done according to pdk",
         type=str,
-        choices=["gf180mcuD", "sky130A"],
-        default="sky130A",
+        choices=["gf180mcuD"],
+        default="gf180mcuD",
     )
     args = parser.parse_args()
 

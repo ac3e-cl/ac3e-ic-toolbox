@@ -25,6 +25,22 @@ _ac3e_setup() {
         done
         export PATH="$clean"
     fi
+    # The user interpreter takes precedence over Nix's global profile. Explicit
+    # template shells remain isolated and do not source this environment.
+    local python_bin="${EDA_VENV:-/opt/eda-venv}/bin"
+    if [[ -d "$python_bin" ]]; then
+        local python_part python_path=''
+        local -a python_parts
+        IFS=: read -r -a python_parts <<< "${PATH:-}"
+        for python_part in "${python_parts[@]}"; do
+            [[ "$python_part" != "$python_bin" ]] || continue
+            python_path="${python_path:+$python_path:}$python_part"
+        done
+        export PATH="$python_bin${python_path:+:$python_path}"
+    fi
+    if [[ -d /opt/ac3e-ic-toolbox/bin ]]; then
+        export PATH="/opt/ac3e-ic-toolbox/bin:$PATH"
+    fi
     for tool in cvc_rv gaw3-xschem gnucap iverilog magic netgen ngspice openvaf verilator xschem yosys openroad; do
         for directory in "$TOOLS/$tool"/*/bin; do
             [[ ! -d "$directory" ]] || _ac3e_path_add PATH "$directory"

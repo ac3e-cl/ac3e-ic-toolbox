@@ -1,22 +1,36 @@
 #!/bin/bash
+set -euo pipefail
 
-set -ex
+: "${TOOLS:?}" "${ORFS_NAME:?}" "${ORFS_REPO_URL:?}" "${ORFS_REPO_COMMIT:?}"
 
-# Clone OpenROAD-flow-scripts repository to /opt/OpenROAD-flow-scripts
-# First clone with minimal depth to get the repo structure
-git clone --depth 1 $ORFS_REPO_URL $TOOLS/$ORFS_NAME
-cd $TOOLS/$ORFS_NAME
+# Runtime resources only. OpenROAD, Yosys and yosys-slang are built separately;
+# the three source gitlinks in the pinned ORFS revision must never be fetched.
+# Explicitly disable recursion even when a builder's Git config enables it.
+git -c submodule.recurse=false clone --no-recurse-submodules --depth 1 \
+    "$ORFS_REPO_URL" "$TOOLS/$ORFS_NAME"
+cd "$TOOLS/$ORFS_NAME"
+git -c submodule.recurse=false fetch --no-recurse-submodules --depth 1 origin "$ORFS_REPO_COMMIT"
+git -c submodule.recurse=false checkout --detach "$ORFS_REPO_COMMIT"
 
-# Fetch the specific commit we need
-git fetch --depth 1 origin $ORFS_REPO_COMMIT
+# The pinned flow/Makefile includes settings.mk before scripts/variables.mk.
+# Its non-Nix defaults otherwise point at tools/install binaries which this
+# distribution deliberately does not build. Resolve separately installed tools
+# at runtime; environment and command-line overrides retain their precedence.
+printf '%s\n' \
+    '# Runtime-only distribution: use independently installed executables.' \
+    'export OPENROAD_EXE ?= $(shell command -v openroad)' \
+    'export OPENSTA_EXE ?= $(shell command -v sta)' \
+    'export YOSYS_EXE ?= $(shell command -v yosys)' > flow/settings.mk
 
-# Checkout the specific commit
-git checkout $ORFS_REPO_COMMIT
-
-# Initialize and update git submodules (may be needed by the flow scripts)
-git submodule update --init --recursive --depth 1
-
-# Cleanup: Remove .git directory to save space (keep .gitmodules if needed for reference)
-# Note: This prevents git operations in the container but saves significant space
-# Uncomment if git history is not needed in runtime:
-# rm -rf .git
+# Keep immutable provenance before deleting Git's object database. Gitlinks are
+# recorded, not initialized; their SHAs identify sources absent from this image.
+git rev-parse HEAD > ORFS_REVISION
+{
+    printf 'repository=%s\ncommit=%s\n' "$ORFS_REPO_URL" "$(cat ORFS_REVISION)"
+    git ls-tree -r HEAD | while IFS=$'\t' read -r entry path; do
+        if [[ "$entry" == '160000 commit '* ]]; then
+            printf '%s\t%s\n' "${entry#160000 commit }" "$path"
+        fi
+    done
+} > ORFS_PROVENANCE
+rm -rf .git

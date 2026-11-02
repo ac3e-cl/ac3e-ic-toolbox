@@ -1,12 +1,15 @@
 {
   "tests": {
     "analog/xyce-dc.sh": "Excluded by user: Xyce is not included in the current final image.",
-    "digital/test-orfs.sh": "Excluded by user: installed ORFS is incompatible with Yosys 0.44."
+    "digital/test-orfs.sh": "Excluded by user: installed ORFS is incompatible with Yosys 0.44.",
+    "pdk/ngspice-sky130-mosfet.sh": "SKY temporarily excluded for image-size analysis; planned for a later release. Test preserved.",
+    "pdk/librelane-smoke.sh": "SKY temporarily excluded for image-size analysis; the upstream smoke test defaults to SKY130. Test preserved.",
+    "pdk/librelane-template-sky.sh": "SKY temporarily excluded for image-size analysis; planned for a later release. Test preserved, including in the full suite."
   },
   "long_running": {
     "pdk/librelane-template-gf.sh": "Long GF180 full-chip flow including IR drop; opt in with test_all_full.sh.",
     "pdk/librelane-template-ihp.sh": "Long IHP full-chip flow and physical checks; opt in with test_all_full.sh.",
-    "pdk/librelane-template-sky.sh": "Long SKY hardening, submission and gate-level flow; opt in with test_all_full.sh."
+    "pdk/librelane-template-sky.sh": "Long SKY flow preserved for its return; temporarily hard-excluded under tests."
   },
   "manifest": {
     "XYCE_NAME": "Excluded by user: Xyce is not included in the current final image.",

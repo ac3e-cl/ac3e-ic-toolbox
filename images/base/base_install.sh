@@ -64,6 +64,17 @@ MINIMUM_DEPS=(
 	librsvg2-2
 	librsvg2-common
 	libpython3-dev
+	# Runtime libraries for the side-by-side CPython 3.11 installation.
+	libsqlite3-0
+	libreadline8
+	libffi8
+	liblzma5
+	libbz2-1.0
+	libssl3
+	libgdbm6
+	libgdbm-compat4
+	libncursesw6
+	libuuid1
 	openssl
 
 	# Usability
