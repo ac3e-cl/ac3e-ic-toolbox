@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# GF-only wafer.space precheck in its own recorded Nix environment; no runtime Nix.
+set -euo pipefail
+root="${LIBRELANE_TEMPLATES_ROOT:-/opt/librelane-templates}"
+usage() {
+    echo 'Usage: gf180-precheck DIRECTORY --input LAYOUT --output LAYOUT --id ID --slot SLOT [--top TOP] [--cob] [--threads N] [--workers N] [--run-tag TAG]'
+    exit "${1:-2}"
+}
+[[ $# -ge 1 ]] || { usage >&2; }
+[[ $1 != --help && $1 != -h ]] || usage 0
+project=$1
+shift
+[[ -d "$project" ]] || { echo "Missing project: $project" >&2; exit 1; }
+project=$(realpath -- "$project")
+root=$(realpath -- "$root")
+args=()
+input= output= die_id= slot= run_tag=
+declare -A seen=()
+while [[ $# -gt 0 ]]; do
+    option=$1
+    [[ ! ${seen[$option]+yes} ]] || usage
+    seen[$option]=yes
+    case "$option" in
+        --cob) args+=("$1"); shift ;;
+        --input|--output|--id|--slot|--top|--threads|--workers|--run-tag)
+            [[ $# -ge 2 && -n $2 && $2 != --* ]] || usage
+            case "$option" in
+                --input) input=$2 ;;
+                --output) output=$2 ;;
+                --id) die_id=$2 ;;
+                --slot) slot=$2 ;;
+                --run-tag) [[ $2 =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || usage; run_tag=$2 ;;
+                --threads|--workers) [[ $2 =~ ^[1-9][0-9]*$ ]] || usage ;;
+            esac
+            args+=("$1" "$2"); shift 2 ;;
+        *) usage ;;
+    esac
+done
+[[ -n $input && -n $output && -n $die_id ]] || usage
+case "$slot" in 1x1|0p5x1|1x0p5|0p5x0p5) ;; *) usage ;; esac
+[[ -r "$root/activate/gf-precheck.sh" && -r "$root/src/gf-precheck/precheck.py" && -r "$root/src/gf-precheck/flake.lock" ]] || {
+    echo 'Missing prebuilt GF precheck environment' >&2; exit 1;
+}
+[[ -d "$root/pdks/gf-precheck/gf180mcuD" ]] || { echo 'Missing private GF precheck PDK' >&2; exit 1; }
+cd -- "$project"
+[[ -f "$input" ]] || { echo "Missing layout: $input" >&2; exit 1; }
+resolved_output=$(realpath -m -- "$output")
+[[ $resolved_output == "$project/"* && $resolved_output != "$(realpath -- "$input")" ]] || {
+    echo 'Output must stay inside DIRECTORY and must not overwrite the input layout' >&2; exit 2;
+}
+# A safe output filename is not enough: LibreLane also writes under runs/TAG.
+runs_root=$(realpath -m -- "$project/runs")
+[[ $runs_root == "$project/"* ]] || {
+    echo 'Run directory must stay inside DIRECTORY' >&2; exit 2;
+}
+if [[ -n $run_tag ]]; then
+    resolved_run=$(realpath -m -- "$project/runs/$run_tag")
+    [[ $resolved_run == "$runs_root/"* ]] || {
+        echo 'Run tag must stay inside DIRECTORY/runs' >&2; exit 2;
+    }
+fi
+# HOME may belong to any numeric UID. Neither Nix-store writes nor user lookup occur.
+exec env -i HOME="${HOME:?A writable HOME is required}" USER="${USER:-designer}" PATH=/usr/bin:/bin \
+    /bin/bash --noprofile --norc -c \
+    'set -e; source "$1"; eval "${shellHook:-}"; export PDK_ROOT="$2" PDK=gf180mcuD GF180_PRECHECK_LOCK="$3/flake.lock"; precheck_source=$3; shift 3; exec python3 "$precheck_source/precheck.py" "$@"' \
+    precheck-shell "$root/activate/gf-precheck.sh" "$root/pdks/gf-precheck" "$root/src/gf-precheck" \
+    --dir "$project" --threads 1 --workers 1 "${args[@]}"

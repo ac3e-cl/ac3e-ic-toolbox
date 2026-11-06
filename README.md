@@ -67,6 +67,17 @@ See the [connection and troubleshooting guide](docs/mcp-integration.md) and
 [Hermes](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp),
 [OpenCode](https://opencode.ai/docs/cli/#mcp).
 
+## Preparación de release 0.3.1
+
+Las [notas y gates de 0.3.1](docs/release-0.3.1.md) describen la migración GF180
+al template wafer.space 1.6.0, PDK `792ef67037d74c8c51811eab3ce23cf793491296`
+y Ciel 3.1.0, preservando los pins y entornos privados IHP. El alias de stage
+`open_pdks` y los argumentos legacy se conservan; no identifican el nuevo PDK GF.
+Estas notas son preparación, **no una afirmación de imagen publicada, builds,
+precheck ni flujos completos aprobados**. Los resultados de imágenes anteriores
+no validan esta combinación. Consultar el [plan](docs/gf180-update-0.3.1-plan.md)
+para el alcance completo y los gates aún pendientes.
+
 ## About
 
 The AC3E IC Toolbox repository provides an open-source suite of tools for integrated circuit design, simulation, and verification.
@@ -111,8 +122,9 @@ We welcome contributions from the global IC design community!
 
 ## How to Use
 
-No local configuration is required. The manifest defaults to
-`isaiash/ac3e-ic-toolbox:0.1.0`. To customize your workstation, optionally create
+No local configuration is required. The manifest selects the default image
+under `isaiash/ac3e-ic-toolbox`; use `make print` to inspect the resolved tag.
+To customize your workstation, optionally create
 `.env` with literal `KEY=value` lines, for example:
 
 ```bash
@@ -483,8 +495,8 @@ To publish a release:
 3. Create and push the matching branch, for example:
 
    ```bash
-   git switch -c release/0.1.0
-   git push origin release/0.1.0
+   git switch -c release/0.3.1
+   git push origin release/0.3.1
    ```
 
 The workflow validates the manifest and Dockerfile, builds the image through

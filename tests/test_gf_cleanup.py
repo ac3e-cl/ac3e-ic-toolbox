@@ -11,7 +11,7 @@ class Cleanup(unittest.TestCase):
     def test_private_backing_remains_readable(self):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
             root = pathlib.Path(tmp)
-            backing = root / 'volare/gf180mcu/versions/pin'
+            backing = root / 'ciel/gf180mcu/versions/pin'
             (backing / 'gf180mcuA').mkdir(parents=True)
             (backing / 'gf180mcuD').mkdir()
             (backing / 'gf180mcuA/resource').write_text('rules')

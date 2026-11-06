@@ -23,12 +23,18 @@ for row in "${rows[@]}"; do
     git clone --no-checkout "$url" "$root/src/$key"
     git -C "$root/src/$key" checkout --detach "$commit"
     git -C "$root/src/$key" submodule update --init --recursive
-    python3 - "$root/src/$key" "$librelane_commit" "$pdk_commit" <<'PY'
+    python3 - "$root/src/$key" "$librelane_commit" "$pdk_commit" "$key" <<'PY'
 import json, pathlib, re, sys
 root = pathlib.Path(sys.argv[1])
-assert json.loads((root / 'flake.lock').read_text())['nodes']['librelane']['locked']['rev'] == sys.argv[2]
+nodes = json.loads((root / 'flake.lock').read_text())['nodes']
+assert nodes['librelane']['locked']['rev'] == sys.argv[2]
 assert re.search(r'^PDK_COMMIT \?= (\w+)$', (root / 'Makefile').read_text(), re.M)[1] == sys.argv[3]
+if sys.argv[4] == 'gf':
+    assert nodes['ciel']['locked']['rev'] == 'e180507a4190462d65cdded4448eb4f7bd2f30fa'
+    assert nodes['ciel']['original']['ref'] == '3.1.0'
+    assert '--include-libraries all' in (root / 'Makefile').read_text()
 PY
+    lock_hash=$(sha256sum "$root/src/$key/flake.lock")
     env -u BASH_ENV -u PYTHONPATH -u LD_LIBRARY_PATH \
         nix develop --accept-flake-config --no-update-lock-file \
         --max-jobs "${MAX_BUILD_JOBS:-2}" --cores "${MAX_BUILD_JOBS:-2}" \
@@ -38,4 +44,8 @@ PY
         /home/designer/.nix-profile/bin/nix --extra-experimental-features 'nix-command flakes' \
         develop --offline "$root/profiles/$key" --command bash --noprofile --norc -c \
         'cd "$1"; make clone-pdk PDK_ROOT="$2"' template-install "$root/src/$key" "$root/pdks/$key"
+    [[ $(sha256sum "$root/src/$key/flake.lock") == "$lock_hash" ]] || {
+        echo "Template lock changed during installation: $key" >&2; exit 1;
+    }
 done
+bash "$(dirname -- "${BASH_SOURCE[0]}")/install-precheck.sh" "$manifest"

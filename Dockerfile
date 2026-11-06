@@ -25,6 +25,11 @@ ARG OPEN_PDKS_REPO_URL
 ARG OPEN_PDKS_REPO_COMMIT
 ARG OPEN_PDKS_NAME
 
+# Ciel 3.1.0 and wafer.space GF180 PDK used by template 1.6.0
+ARG CIEL_VERSION
+ARG CIEL_REPO_COMMIT
+ARG GF180_PDK_COMMIT
+
 # Magic
 ARG MAGIC_REPO_URL
 ARG MAGIC_REPO_COMMIT
@@ -251,17 +256,19 @@ RUN --mount=type=bind,source=images/magic,target=/images/magic \
 #######################################################################
 # Build PDKs from open_pdks
 #######################################################################
-FROM magic AS pdk_builder
+FROM builder AS pdk_builder
 
 ARG OPEN_PDKS_REPO_URL \
     OPEN_PDKS_REPO_COMMIT \
     OPEN_PDKS_NAME
 
-RUN pip install --no-cache-dir volare==0.18.1
+ARG CIEL_VERSION CIEL_REPO_COMMIT GF180_PDK_COMMIT
+RUN pip install --no-cache-dir "ciel @ git+https://github.com/fossi-foundation/ciel.git@${CIEL_REPO_COMMIT}" \
+    && test "$(python3 -c 'from importlib.metadata import version; print(version("ciel"))')" = "$CIEL_VERSION"
 
 FROM pdk_builder AS gf180_pdk
-# The volare/open_pdks gf180 build runs magic over large SRAM/IO layouts;
-# parallel jobs multiply that peak, so bound it independently of MAX_BUILD_JOBS.
+# Ciel installs the pinned prebuilt GF180 PDK; no Magic conversion build.
+ARG GF180_PDK_COMMIT
 ARG PDK_BUILD_JOBS
 ENV PDK_BUILD_JOBS=${PDK_BUILD_JOBS}
 RUN --mount=type=bind,source=images/pdks,target=/images/pdks \
@@ -271,8 +278,7 @@ RUN --mount=type=bind,source=images/final_structure/configure,target=/images/fin
     cd /images/final_structure/configure/ \
     && bash patch_pdk_gf180mcu.sh
 
-# Compatibility target. Copy whole roots, preserving Volare backing directories
-# and the relative public symlinks (in particular GF180 D's private A backing).
+# Compatibility target. Preserve the complete Ciel root and public symlinks.
 FROM pdk_builder AS open_pdks
 COPY --from=gf180_pdk ${PDK_ROOT} ${PDK_ROOT}
 
@@ -603,8 +609,16 @@ ARG NIX_INSTALLER_URL \
     NIX_SUBSTITUTER_URL \
     NIX_SUBSTITUTER_PUBLIC_KEY \
     LIBRELANE_REPO_URL \
-    LIBRELANE_REPO_COMMIT
+    LIBRELANE_REPO_COMMIT \
+    CIEL_VERSION \
+    CIEL_REPO_COMMIT \
+    GF180_PDK_COMMIT
+ENV GF180_PDK_COMMIT=${GF180_PDK_COMMIT} CIEL_VERSION=${CIEL_VERSION}
 USER root
+# Pin the public Ciel independently of each template's private Nix environment.
+RUN uv pip install --python /opt/eda-venv/bin/python --strict \
+      "ciel @ git+https://github.com/fossi-foundation/ciel.git@${CIEL_REPO_COMMIT}" \
+    && test "$(/opt/eda-venv/bin/python -c 'from importlib.metadata import version; print(version("ciel"))')" = "$CIEL_VERSION"
 
 # Install sudo for Nix installer
 RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
@@ -650,6 +664,7 @@ RUN source ~/.nix-profile/etc/profile.d/nix.sh && \
 USER root
 RUN mkdir -p /opt/librelane-templates && chown designer:designer /opt/librelane-templates
 COPY --chmod=755 images/librelane/librelane-template /usr/local/bin/librelane-template
+COPY --chmod=755 images/librelane/gf180-precheck /usr/local/bin/gf180-precheck
 USER designer
 ARG MAX_BUILD_JOBS
 RUN --mount=type=bind,source=images/librelane,target=/images/librelane \
