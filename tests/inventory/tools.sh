@@ -27,7 +27,8 @@ commands = {
     'LIBRELANE_REPO_URL': 'librelane', 'NIX_INSTALLER_URL': 'nix',
 }
 resources = {
-    'OPEN_PDKS_NAME': ('open_pdks', Path(os.environ['PDK_ROOT']) / 'gf180mcuD/libs.tech/ngspice/sm141064.ngspice'),
+    # Preserve the historical inventory key for consumers, not its old identity.
+    'OPEN_PDKS_NAME': ('gf180mcuD (Ciel)', Path(os.environ['PDK_ROOT']) / 'gf180mcuD/libs.tech/ngspice/sm141064.ngspice'),
     'IHP_PDK_NAME': ('ihp-sg13g2', Path(os.environ['PDK_ROOT']) / 'ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib'),
     'ORFS_NAME': ('OpenROAD-flow-scripts', Path(os.environ['ORFS_DIR']) / 'flow/Makefile'),
 }
@@ -40,8 +41,21 @@ for key in sorted(commands.keys() | resources.keys()):
     else:
         name, resource = resources[key]
         path = str(resource) if resource.is_file() else None
-    records.append({'key': key, 'name': name, 'path': path,
-                    'excluded': exclusions.get(key)})
+    record = {'key': key, 'name': name, 'path': path,
+              'excluded': exclusions.get(key)}
+    if key == 'OPEN_PDKS_NAME':
+        expected_revision = '792ef67037d74c8c51811eab3ce23cf793491296'
+        public_root = Path(os.environ['PDK_ROOT']) / 'gf180mcuD'
+        resolved_root = public_root.resolve()
+        record.update(manager='ciel', revision_key='GF180_PDK_COMMIT',
+                      legacy_inventory_key=True, expected_revision=expected_revision,
+                      public_root=str(public_root), resolved_root=str(resolved_root))
+        # Check the actual backing tree, not the legacy OPEN_PDKS pin or an
+        # environment variable that could describe a different installed PDK.
+        if key not in exclusions and (expected_revision not in resolved_root.parts
+                                      or 'ciel' not in resolved_root.parts):
+            errors.append(f'GF180 Ciel backing revision mismatch: {resolved_root}')
+    records.append(record)
     if not path and key not in exclusions:
         errors.append(f'Missing expected tool/resource: {key} ({name})')
 (root / 'run/inventory/tools.json').write_text(json.dumps(records, indent=2) + '\n')

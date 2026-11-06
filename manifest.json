@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "release": {
-    "version": "0.3.0"
+    "version": "0.3.1"
   },
   "image": {
     "registry": "docker.io",
@@ -18,10 +18,22 @@
     },
     "gf": {
       "url": "https://github.com/wafer-space/gf180mcu-project-template",
-      "commit": "33e4b5ecc9faac82787fa7cb205f08377e27b912",
-      "librelaneCommit": "df37e133fc3426c16e8356b1f50a17f8d6082f60",
+      "commit": "d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c",
+      "librelaneCommit": "99148a9c1e648cdfdb9d7b772481af32e0dfbe8b",
       "pdk": "gf180mcuD",
-      "pdkCommit": "f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+      "pdkCommit": "792ef67037d74c8c51811eab3ce23cf793491296"
+    }
+  },
+  "librelanePrechecks": {
+    "gf": {
+      "url": "https://github.com/wafer-space/gf180mcu-precheck",
+      "version": "1.7.4",
+      "commit": "9b4e7dab6af073d02b81ecc368069540d2f67db9",
+      "librelaneCommit": "99148a9c1e648cdfdb9d7b772481af32e0dfbe8b",
+      "pdk": "gf180mcuD",
+      "pdkCommit": "792ef67037d74c8c51811eab3ce23cf793491296",
+      "cielVersion": "3.1.0",
+      "cielCommit": "e180507a4190462d65cdded4448eb4f7bd2f30fa"
     }
   },
   "build": {
@@ -31,6 +43,9 @@
       "ENABLE_GUI": "",
       "MAX_BUILD_JOBS": "2",
       "PDK_BUILD_JOBS": "1",
+      "CIEL_VERSION": "3.1.0",
+      "CIEL_REPO_COMMIT": "e180507a4190462d65cdded4448eb4f7bd2f30fa",
+      "GF180_PDK_COMMIT": "792ef67037d74c8c51811eab3ce23cf793491296",
       "PYTHON_VERSION": "3.11.18",
       "PYTHON_SOURCE_SHA256": "9120e0a653868f6e3698d36cdd99e5a58903ec9469e448f21d98f7b16d8fa290",
       "NGSPICE_REPO_URL": "https://github.com/danchitnis/ngspice-sf-mirror",

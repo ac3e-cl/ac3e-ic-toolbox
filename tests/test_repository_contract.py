@@ -11,29 +11,52 @@ PYTHON_ARGUMENTS = {
     'PYTHON_VERSION': '3.11.18',
     'PYTHON_SOURCE_SHA256': '9120e0a653868f6e3698d36cdd99e5a58903ec9469e448f21d98f7b16d8fa290',
 }
-# An explicit scheduling addition; the gf180 volare build gets its own job
-# budget because magic layout conversion peaks far above a compile job.
+# Retained legacy scheduling argument for compatibility; Ciel downloads do not
+# perform the former memory-heavy Volare/Magic conversion.
 PDK_JOB_ARGUMENTS = {
     'PDK_BUILD_JOBS': '1',
 }
 
+# Only these GF additions and template fields may differ from the snapshot.
+# Do not refresh the baseline to hide unrelated pin changes.
+GF_ARGUMENTS = {
+    'CIEL_VERSION': '3.1.0',
+    'CIEL_REPO_COMMIT': 'e180507a4190462d65cdded4448eb4f7bd2f30fa',
+    'GF180_PDK_COMMIT': '792ef67037d74c8c51811eab3ce23cf793491296',
+}
+GF_TEMPLATE_REVISIONS = {
+    'commit': 'd99f6e1ba14e549e80d5d83e113fbd82ed37ed5c',
+    'librelaneCommit': '99148a9c1e648cdfdb9d7b772481af32e0dfbe8b',
+    'pdkCommit': GF_ARGUMENTS['GF180_PDK_COMMIT'],
+}
+
 
 class RepositoryContract(unittest.TestCase):
-    def test_tool_pins_are_unchanged(self):
+    def test_only_authorized_gf_pins_change(self):
         # A checked-in snapshot works in shallow clones and source archives too.
         before = BASELINE['manifest']
         after = json.loads((ROOT / 'manifest.json').read_text())
         self.assertTrue(PYTHON_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
         self.assertTrue(PDK_JOB_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
+        self.assertTrue(GF_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
         expected_arguments = {**before['build']['arguments'], **PYTHON_ARGUMENTS,
-                               **PDK_JOB_ARGUMENTS}
+                              **PDK_JOB_ARGUMENTS, **GF_ARGUMENTS}
         self.assertEqual(expected_arguments, after['build']['arguments'])
         self.assertEqual(after['librelaneTemplates'], {
-            key: before['librelaneTemplates'][key] for key in ('ihp', 'gf')})
+            'ihp': before['librelaneTemplates']['ihp'],
+            'gf': {**before['librelaneTemplates']['gf'], **GF_TEMPLATE_REVISIONS},
+        })
         self.assertEqual(after['build']['target'], 'ac3e-ic-toolbox')
         self.assertEqual(before['image']['registry'], after['image']['registry'])
         self.assertEqual(after['image']['namespace'], 'isaiash')
         self.assertEqual(after['image']['name'], 'ac3e-ic-toolbox')
+
+    def test_ihp_pdk_and_template_remain_frozen(self):
+        manifest = json.loads((ROOT / 'manifest.json').read_text())
+        self.assertEqual(manifest['build']['arguments']['IHP_PDK_REPO_COMMIT'],
+                         'cfc0e22b92306178ebb5a5bc4865afe3294654d0')
+        self.assertEqual(manifest['librelaneTemplates']['ihp'],
+                         BASELINE['manifest']['librelaneTemplates']['ihp'])
 
     def test_no_new_tool_stages_or_final_copies(self):
         after = (ROOT / 'Dockerfile').read_text()

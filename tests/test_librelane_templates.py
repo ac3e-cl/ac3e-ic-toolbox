@@ -37,8 +37,23 @@ class LibreLaneTemplates(unittest.TestCase):
         self.assertEqual(set(pins), {'ihp', 'gf'})
         baseline = json.loads(subprocess.check_output(
             ['git', 'show', 'HEAD:manifest.json'], cwd=ROOT, text=True))
-        for key in ('ihp', 'gf'):
-            self.assertEqual(pins[key], baseline['librelaneTemplates'][key])
+        self.assertEqual(pins['ihp'], baseline['librelaneTemplates']['ihp'])
+        self.assertEqual(pins['gf'], {
+            'url': 'https://github.com/wafer-space/gf180mcu-project-template',
+            'commit': 'd99f6e1ba14e549e80d5d83e113fbd82ed37ed5c',
+            'librelaneCommit': '99148a9c1e648cdfdb9d7b772481af32e0dfbe8b',
+            'pdk': 'gf180mcuD',
+            'pdkCommit': '792ef67037d74c8c51811eab3ce23cf793491296',
+        })
+
+    def test_installer_materializes_precheck_and_checks_gf_ciel_without_touching_ihp(self):
+        installer = (ROOT / 'images/librelane/install.sh').read_text()
+        self.assertIn('install-precheck.sh', installer)
+        self.assertIn("if sys.argv[4] == 'gf':", installer)
+        self.assertIn("nodes['ciel']['locked']['rev']", installer)
+        self.assertIn('sha256sum', installer)
+        overlay = (ROOT / 'images/librelane/Dockerfile').read_text()
+        self.assertIn('images/librelane/gf180-precheck /usr/local/bin/gf180-precheck', overlay)
 
     def test_removed_template_is_rejected_even_if_stale_source_exists(self):
         with tempfile.TemporaryDirectory() as tmp:

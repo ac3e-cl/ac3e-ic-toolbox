@@ -51,9 +51,11 @@ class BuildGraphTests(unittest.TestCase):
             self.assertEqual(graph[name][0], "pdk_builder")
             self.assertIn(installer, graph[name][1])
             self.assertIn(patch, graph[name][1])
-        self.assertEqual(graph["pdk_builder"][0], "magic")
+        self.assertEqual(graph["pdk_builder"][0], "builder")
         self.assertNotIn("python_packages.sh", graph["pdk_builder"][1])
-        self.assertIn("volare==0.18.1", graph["pdk_builder"][1])
+        self.assertIn("CIEL_VERSION", graph["pdk_builder"][1])
+        self.assertNotIn("volare", graph["pdk_builder"][1].lower())
+        self.assertIn("GF180_PDK_COMMIT", graph["gf180_pdk"][1])
         self.assertEqual(graph["open_pdks"][0], "pdk_builder")
         for name in ("gf180_pdk",):
             self.assertRegex(graph["open_pdks"][1], rf"COPY --from={name}\s+\$\{{PDK_ROOT\}}\s+\$\{{PDK_ROOT\}}")

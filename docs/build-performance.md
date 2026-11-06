@@ -12,18 +12,22 @@ shared filesystem: they can race on package databases, temporary paths, or
 installation prefixes.
 
 The build distinguishes lightweight compiler dependencies from the heavier common
-libraries. Independent PDK preparation can proceed in separate stages after
-Magic is available. Final assembly waits for all required artifacts.
+libraries. For 0.3.1, `pdk_builder` derives from `builder` rather than `magic`:
+GF180 preparation uses a pinned Ciel artifact instead of Volare/open_pdks layout
+conversion. `open_pdks` remains a compatibility stage alias. Final assembly waits
+for all required artifacts, including the full Ciel backing root and its symlinks.
+See the [0.3.1 acceptance gates](release-0.3.1.md); this graph change alone does
+not demonstrate a successful download or runtime compatibility.
 
 `MAX_BUILD_JOBS` controls compilation jobs **per stage**, not across the entire
 build. Several simultaneous compilations each consume that allowance. Keep a
 conservative value on memory-constrained hosts, especially for OpenROAD and
 OR-Tools. More CPU threads can make a build slower if it starts swapping.
 
-PDK generation is budgeted separately: `PDK_BUILD_JOBS` bounds the jobs of the
-volare/open_pdks gf180 build (default 1). Its peak comes from magic converting
-large SRAM/IO layouts, not from compiler throughput, so it must not inherit the
-compiler allowance.
+`PDK_BUILD_JOBS` (default 1) remains a legacy compatibility argument. It bounded
+the former Volare/open_pdks GF180 build's memory-heavy Magic conversion. Ciel
+artifact download/activation does not perform that build; increasing this setting
+is not a download accelerator.
 
 Nix has its own scheduling: `max-jobs` is the number of derivations built at once,
 whereas `cores` controls the allowance within a derivation. Downloading a binary
