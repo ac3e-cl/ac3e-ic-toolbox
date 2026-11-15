@@ -67,6 +67,13 @@ See the [connection and troubleshooting guide](docs/mcp-integration.md) and
 [Hermes](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp),
 [OpenCode](https://opencode.ai/docs/cli/#mcp).
 
+## Release 0.3.2
+
+See the [0.3.2 changelog and validation limits](docs/release-0.3.2.md) for the
+Python/shell compatibility fixes and restored Windows VcXsrv defaults. The
+release branch triggers image build, tests and publication; branch availability
+alone does not mean that the image has been published.
+
 ## Preparación de release 0.3.1
 
 Las [notas y gates de 0.3.1](docs/release-0.3.1.md) describen la migración GF180
