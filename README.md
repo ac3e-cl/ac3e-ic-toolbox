@@ -297,6 +297,13 @@ shell behavior. Existing containers must be recreated to use the updated image.
    
    **Note:** We recommend version 21.1.10 as newer versions may have security concerns.
 
+   **Start VcXsrv before `make start` or `start.bat`:** the WSL launcher no
+   longer starts the Windows X server. In XLaunch select **Multiple windows**
+   (`-multiwindow`), display 0, and **Start no client**. Keep access control
+   enabled and configure an Xauthority cookie and a firewall rule restricted to
+   your Docker/WSL network. See the [VcXsrv setup and rendering checks](docs/docker-desktop-terminal.md#vcxsrv-window-mode-and-rendering)
+   for command-line flags and the optional indirect-GL setting.
+
 6. **Note:** Some tools may require additional configuration or may not be fully supported.
 
 ### macOS (experimental)

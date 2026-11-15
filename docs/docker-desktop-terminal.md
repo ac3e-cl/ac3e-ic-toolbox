@@ -47,6 +47,58 @@ displays). Limit access to the required Docker/WSL network. Do **not** disable
 access control globally with `xhost +`, expose X11 to the Internet, or disable
 the firewall. X11 access grants substantial control over the graphical session.
 
+### VcXsrv window mode and rendering
+
+The Windows launcher now delegates to WSL; it does not start or configure
+VcXsrv. Before the launcher migration (`5dd7325`), the repository supplied
+`-multiwindow -clipboard -primary -wgl` to VcXsrv and
+`LIBGL_ALWAYS_INDIRECT=1` to the container. Those defaults were removed.
+This confirms a configuration regression, **not** that either option is the
+cause of hidden dialogs or slow KLayout rendering on a particular machine.
+
+For native Windows window integration, select **Multiple windows** in XLaunch
+(`-multiwindow`), display 0, **Start no client**. For a command-line start, the
+following Windows command assumes you already created a matching Xauthority
+file; replace its path with your own:
+
+```cmd
+vcxsrv.exe :0 -multiwindow -clipboard -primary -wgl -listen tcp -auth C:\path\to\container.xauth
+```
+
+Do not run a second server on the same display. Keep access control enabled,
+provide the matching cookie through `XAUTHORITY` in WSL, and restrict Windows
+Firewall access to your Docker/WSL network. Do not select **Disable access control**.
+Use `DISPLAY=host.docker.internal:0` only if it reaches this server from Docker.
+Multiwindow controls window integration; it does not guarantee popup stacking.
+
+To test the former indirect-GL setting, close each KLayout instance and compare
+these commands **inside the same container**, using the same layout:
+
+```bash
+env -u LIBGL_ALWAYS_INDIRECT klayout /foss/designs/your-project/chip.gds
+LIBGL_ALWAYS_INDIRECT=1 klayout /foss/designs/your-project/chip.gds
+```
+
+Compare pan/zoom, startup and dialog visibility separately. If indirect GL helps
+your VcXsrv setup, enable it explicitly when creating a container from WSL:
+
+```bash
+DISPLAY=host.docker.internal:0 \
+  DOCKER_EXTRA_PARAMS='--env LIBGL_ALWAYS_INDIRECT=1' make start
+```
+
+Alternatively add `--env LIBGL_ALWAYS_INDIRECT=1` to existing `DOCKER_EXTRA_PARAMS`
+in your local `.env` (preserve any other arguments). Exporting the GL variable in
+WSL alone does not forward it through the launcher. A resumed container retains
+its original environment: this setting applies to **new** containers; preserve
+mounted designs and any needed writable-layer files before explicitly removing
+an old container. For an existing session use the per-process test above.
+
+Do not impose indirect GL on Linux, WSLg or VNC. [Mesa documents](https://docs.mesa3d.org/envvars.html#libgl-environment-variables)
+that the variable forces indirect rendering; it is not a general acceleration
+switch, and may be slower or unsupported. Windows popup/performance validation
+still requires an A/B test on the affected workstation.
+
 ### Example: native Linux Engine
 
 Run from the graphical host session after setting `IMAGE` to the updated image
