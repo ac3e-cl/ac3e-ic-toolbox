@@ -10,7 +10,7 @@ VERSION = json.loads((ROOT / 'manifest.json').read_text())['release']['version']
 
 class Launchers(unittest.TestCase):
     def launch(self, mode='shell', *args, **env):
-        clean = {k: v for k, v in os.environ.items() if k not in ('DESIGNS', 'SHARED_DIR', 'DISPLAY', 'DOCKER_USER', 'DOCKER_REGISTRY')}
+        clean = {k: v for k, v in os.environ.items() if k not in ('DESIGNS', 'SHARED_DIR', 'DISPLAY', 'DOCKER_USER', 'DOCKER_REGISTRY', 'AC3E_XSERVER', 'WSL_INTEROP', 'WAYLAND_DISPLAY', 'LIBGL_ALWAYS_INDIRECT')}
         clean.update(DRY_RUN='1', ENV_FILE='/dev/null')
         clean.update(env)
         return subprocess.run(['bash', str(ROOT / f'start_{mode}.sh'), '--print-json', *args], env=clean, text=True, capture_output=True)
@@ -55,6 +55,37 @@ class Launchers(unittest.TestCase):
         self.assertIn('VNC_RESOLUTION=1024x768', argv)
         self.assertIn('STD_CELL_LIBRARY=gf180mcu_fd_sc_mcu9t5v0', argv)
 
+    def test_vcxsrv_defaults_and_gl_override(self):
+        for extra, expected in [({}, '1'), ({'LIBGL_ALWAYS_INDIRECT': '0'}, '0')]:
+            result = self.launch('x', AC3E_XSERVER='vcxsrv', **extra)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            argv = json.loads(result.stdout)
+            self.assertIn('DISPLAY=host.docker.internal:0', argv)
+            self.assertIn(f'LIBGL_ALWAYS_INDIRECT={expected}', argv)
+            self.assertFalse(any('source=/tmp/.X11-unix,' in a for a in argv))
+
+    def test_wsl_defaults_preserve_wslg_and_skip_windows_on_dry_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.launch('x', WSL_INTEROP='fixture', DISPLAY=':0', HOME=tmp)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            argv = json.loads(result.stdout)
+            self.assertIn('DISPLAY=host.docker.internal:0', argv)
+            self.assertIn('LIBGL_ALWAYS_INDIRECT=1', argv)
+            self.assertFalse((Path(tmp) / '.cache').exists())
+        result = self.launch('x', WSL_INTEROP='fixture', WAYLAND_DISPLAY='wayland-0', DISPLAY=':0')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        argv = json.loads(result.stdout)
+        self.assertIn('DISPLAY=:0', argv)
+        self.assertFalse(any('LIBGL_ALWAYS_INDIRECT=' in a for a in argv))
+        for mode in ['shell', 'vnc']:
+            argv = json.loads(self.launch(mode, WSL_INTEROP='fixture', AC3E_XSERVER='vcxsrv').stdout)
+            self.assertFalse(any('LIBGL_ALWAYS_INDIRECT=' in a for a in argv))
+
+    def test_native_x11_does_not_force_indirect_gl(self):
+        result = self.launch('x', DISPLAY=':0', AC3E_XSERVER='native')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(any('LIBGL_ALWAYS_INDIRECT=' in a for a in json.loads(result.stdout)))
+
     def test_private_home_loads_interactive_configuration(self):
         argv = json.loads(self.launch().stdout)
         self.assertTrue(any('cp /home/designer/.bashrc "$HOME/.bashrc"' in a for a in argv))
@@ -97,12 +128,12 @@ class Launchers(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn('private-value', result.stdout)
 
-    def existing_container(self, mode='x', running=False, compatible=True):
+    def existing_container(self, mode='x', running=False, compatible=True, stored_display=':0'):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
             path = Path(tmp)
             name = 'launcher-regression'
             state = [{'Config': {'Image': f'isaiash/ac3e-ic-toolbox:{VERSION}' if compatible else 'other:image',
-                                 'Env': ['DISPLAY=:0']},
+                                 'Env': ['DISPLAY=' + stored_display]},
                       'Mounts': [{'Source': tmp, 'Destination': '/home/designer/shared'},
                                  {'Source': '/tmp/.X11-unix', 'Destination': '/tmp/.X11-unix'}],
                       'State': {'Running': running}}]
@@ -130,6 +161,13 @@ class Launchers(unittest.TestCase):
                     expected += ['-ai']
                 self.assertEqual(calls[-1], expected + ['launcher-regression'])
                 self.assertFalse(any(call[0] in ('run', 'image') for call in calls))
+
+    def test_changed_x_display_requires_explicit_recreation(self):
+        for running in [False, True]:
+            result, calls = self.existing_container(running=running, stored_display=':9')
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn('X11 configuration changed', result.stderr)
+            self.assertFalse(any(call[0] in ['exec', 'run'] or call[:2] == ['container', 'start'] for call in calls))
 
     def test_start_refuses_incompatible_stopped_container(self):
         result, calls = self.existing_container(compatible=False)

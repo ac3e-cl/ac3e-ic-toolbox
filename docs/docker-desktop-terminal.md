@@ -49,55 +49,64 @@ the firewall. X11 access grants substantial control over the graphical session.
 
 ### VcXsrv window mode and rendering
 
-The Windows launcher now delegates to WSL; it does not start or configure
-VcXsrv. Before the launcher migration (`5dd7325`), the repository supplied
-`-multiwindow -clipboard -primary -wgl` to VcXsrv and
-`LIBGL_ALWAYS_INDIRECT=1` to the container. Those defaults were removed.
-This confirms a configuration regression, **not** that either option is the
-cause of hidden dialogs or slow KLayout rendering on a particular machine.
+When WSLg is not active, the default Windows `start.bat` path starts VcXsrv with
+`-multiwindow -clipboard -primary -wgl -listen tcp`, display 0, and passes
+`LIBGL_ALWAYS_INDIRECT=1` to new containers. WSL `make start` selects the same
+route when `WSL_INTEROP` is set and `WAYLAND_DISPLAY` is absent. WSLg and native
+Linux keep their existing display/rendering behavior. TCP displays no longer
+mount the unrelated Linux X11 socket directory.
 
-For native Windows window integration, select **Multiple windows** in XLaunch
-(`-multiwindow`), display 0, **Start no client**. For a command-line start, the
-following Windows command assumes you already created a matching Xauthority
-file; replace its path with your own:
+The launcher creates a private MIT-MAGIC-COOKIE-1 authority file under
+`~/.cache/ac3e-ic-toolbox/vcxsrv.xauth`, passes its Windows path to VcXsrv using
+`-auth`, and mounts it read-only into the container. It reuses the cookie on
+subsequent starts. An explicitly supplied `XAUTHORITY` file is used instead;
+it must already contain a cookie valid for the TCP display. Access control is
+**not** disabled. VcXsrv must be installed on Windows and WSL interop must expose
+`powershell.exe` and `wslpath`. The trusted repository script uses a process-scoped
+PowerShell execution-policy override; machine policy is not changed.
+Configure Windows Firewall access only for the
+required Docker/WSL network; the launcher does not modify firewall rules.
 
-```cmd
-vcxsrv.exe :0 -multiwindow -clipboard -primary -wgl -listen tcp -auth C:\path\to\container.xauth
+An existing VcXsrv instance is reused only if it already uses display 0,
+`-multiwindow`, and the same `-auth` file, without `-ac`. Otherwise the launcher stops with
+an explanation: close that server explicitly and retry. It never kills another
+session's X server. `DRY_RUN=1` does not start Windows processes or create cookies.
+
+Overrides in WSL or local `.env`:
+
+```bash
+# Use WSLg or an externally configured X server (no automatic VcXsrv startup):
+AC3E_XSERVER=native make start
+# Keep the automatic VcXsrv route but disable indirect GL:
+LIBGL_ALWAYS_INDIRECT=0 make start
+# Explicitly select VcXsrv, even if WSLg is installed:
+AC3E_XSERVER=vcxsrv make start
 ```
 
-Do not run a second server on the same display. Keep access control enabled,
-provide the matching cookie through `XAUTHORITY` in WSL, and restrict Windows
-Firewall access to your Docker/WSL network. Do not select **Disable access control**.
-Use `DISPLAY=host.docker.internal:0` only if it reaches this server from Docker.
-Multiwindow controls window integration; it does not guarantee popup stacking.
+`AC3E_XSERVER` accepts `auto` (the WSL launcher default), `native`, or `vcxsrv`.
+`start.bat` uses the same `auto` selection and honors local `.env` settings; an
+explicit Windows `AC3E_XSERVER` environment variable takes precedence. VcXsrv uses
+`DISPLAY=host.docker.internal:0` unless a TCP display is already supplied;
+local Unix display values are replaced on this route. Automatic startup supports
+display 0 only. Use the native route for other externally configured displays.
 
-To test the former indirect-GL setting, close each KLayout instance and compare
-these commands **inside the same container**, using the same layout:
+Existing containers retain their original environment. Recreate them explicitly
+(or accept the launcher's version-update prompt) to adopt the release defaults,
+preserving mounted designs and any needed writable-layer files first.
+
+These settings restore the historical Windows defaults, but do not establish
+that they fix every popup or performance issue. [Mesa documents](https://docs.mesa3d.org/envvars.html#libgl-environment-variables)
+indirect GL as a rendering mode, not a general acceleration switch. To compare
+KLayout on an affected workstation, close each instance and use the same layout:
 
 ```bash
 env -u LIBGL_ALWAYS_INDIRECT klayout /foss/designs/your-project/chip.gds
 LIBGL_ALWAYS_INDIRECT=1 klayout /foss/designs/your-project/chip.gds
 ```
 
-Compare pan/zoom, startup and dialog visibility separately. If indirect GL helps
-your VcXsrv setup, enable it explicitly when creating a container from WSL:
-
-```bash
-DISPLAY=host.docker.internal:0 \
-  DOCKER_EXTRA_PARAMS='--env LIBGL_ALWAYS_INDIRECT=1' make start
-```
-
-Alternatively add `--env LIBGL_ALWAYS_INDIRECT=1` to existing `DOCKER_EXTRA_PARAMS`
-in your local `.env` (preserve any other arguments). Exporting the GL variable in
-WSL alone does not forward it through the launcher. A resumed container retains
-its original environment: this setting applies to **new** containers; preserve
-mounted designs and any needed writable-layer files before explicitly removing
-an old container. For an existing session use the per-process test above.
-
-Do not impose indirect GL on Linux, WSLg or VNC. [Mesa documents](https://docs.mesa3d.org/envvars.html#libgl-environment-variables)
-that the variable forces indirect rendering; it is not a general acceleration
-switch, and may be slower or unsupported. Windows popup/performance validation
-still requires an A/B test on the affected workstation.
+Compare pan/zoom, startup and dialog visibility separately. Visual behavior
+still requires validation on Windows; Linux command-boundary tests do not
+establish window stacking or GUI performance.
 
 ### Example: native Linux Engine
 

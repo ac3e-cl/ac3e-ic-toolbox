@@ -102,8 +102,31 @@ case $mode in
 esac
 case $mode in
     x|attach)
+        xserver=${AC3E_XSERVER:-auto}
+        if [[ $xserver == auto ]]; then
+            xserver=native
+            # Preserve WSLg; other WSL sessions use the Windows VcXsrv route.
+            if [[ -n ${WSL_INTEROP:-} && -z ${WAYLAND_DISPLAY:-} ]]; then xserver=vcxsrv; fi
+        fi
+        case $xserver in
+            vcxsrv)
+                case ${DISPLAY:-} in
+                    ''|:*|unix:*) export DISPLAY=host.docker.internal:0 ;;
+                esac
+                export DISPLAY
+                argv+=(--env "LIBGL_ALWAYS_INDIRECT=${LIBGL_ALWAYS_INDIRECT:-1}")
+                if [[ ${DRY_RUN:-0} != 1 ]]; then
+                    XAUTHORITY=$(python3 "$root/runtime/vcxsrv.py")
+                fi
+                ;;
+            native) ;;
+            *) echo 'AC3E_XSERVER must be auto, native or vcxsrv' >&2; exit 2 ;;
+        esac
         [[ -n ${DISPLAY:-} ]] || { echo 'X mode requires DISPLAY' >&2; exit 2; }
-        argv+=(--mount type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix,readonly --env "DISPLAY=$DISPLAY")
+        argv+=(--env "DISPLAY=$DISPLAY")
+        if [[ $DISPLAY == :* || $DISPLAY == unix:* ]]; then
+            argv+=(--mount type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix,readonly)
+        fi
         auth=${XAUTHORITY:-$HOME/.Xauthority}
         if [[ -f $auth ]]; then argv+=(--mount "type=bind,source=$auth,target=/tmp/.Xauthority,readonly" --env XAUTHORITY=/tmp/.Xauthority); fi;;
     vnc) port "${VNC_PORT:-5901}" 5901; port "${HTTP_PORT:-${WEBSERVER_PORT:-8080}}" 80;;
@@ -161,6 +184,20 @@ if printf '%s\n' "$existing" | python3 -c 'import sys; sys.exit(0 if sys.argv[1]
     mapfile -t fields <<< "$metadata"
     current_reference=${fields[0]}
     running=${fields[1]}
+    if [[ $mode == x && $current_reference == "$reference" ]]; then
+        expected_gl= expected_auth=
+        [[ $xserver != vcxsrv ]] || expected_gl=${LIBGL_ALWAYS_INDIRECT:-1}
+        [[ ! -f $auth ]] || expected_auth=$auth
+        if ! jq -e --arg display "$DISPLAY" --arg gl "$expected_gl" --arg auth "$expected_auth" '
+            .[0] |
+            any(.Config.Env[]?; . == ("DISPLAY=" + $display)) and
+            ($gl == "" or any(.Config.Env[]?; . == ("LIBGL_ALWAYS_INDIRECT=" + $gl))) and
+            ($auth == "" or any(.Mounts[]?; .Source == $auth and .Destination == "/tmp/.Xauthority"))
+        ' <<< "$state" >/dev/null; then
+            echo 'X11 configuration changed; explicitly recreate the container to apply the display, authorization or rendering settings.' >&2
+            exit 2
+        fi
+    fi
     stored_mode=$(jq -r '.[0].Config.Labels["org.ac3e.ic-toolbox.mode"] // empty' <<< "$state")
     if [[ -n $stored_mode && $stored_mode != "$session_mode" && $mode != attach && ! ( $session_mode == shell && $stored_mode == x ) ]]; then
         printf 'Container %s uses %s mode; remove it explicitly before switching to %s.\n' "$name" "$stored_mode" "$session_mode" >&2
