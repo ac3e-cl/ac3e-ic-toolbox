@@ -349,6 +349,33 @@ system Python, with `/opt/eda-venv/bin` selected by default on `PATH`.
 `/usr/bin/python3` remains Ubuntu 22.04's Python 3.10; it is not replaced.
 The global and template-specific Nix environments keep their own interpreters
 and dependencies rather than sharing the EDA venv.
+The default EDA venv includes `openpyxl>=3.1` and `cocotb>=2.0,<3`
+(`cocotb-config --version`). It is image-managed and read-only for regular users.
+
+#### Add project Python packages without root
+
+Create an independent venv in your writable, persistent project directory:
+
+```bash
+cd /foss/designs/your-project
+python3 -m venv .venv
+export EDA_VENV="$PWD/.venv"
+source "$EDA_VENV/bin/activate"
+python -m pip install "openpyxl>=3.1" "gdstk>=1.0" "cocotb>=2.0,<3"
+```
+
+Set `EDA_VENV` before activation so child Bash shells keep selecting this Python
+rather than restoring `/opt/eda-venv` through `BASH_ENV`. Repeat the `export` and
+`source` commands in a new session. This venv does **not** inherit the image's
+Python packages: install the dependencies your project needs. Exit the shell to
+return to the default environment. Recreate the venv after an image/Python upgrade;
+keep requirements in your project instead of copying the venv to another host.
+Do not use this procedure inside the isolated wafer.space environments.
+
+The global `gdstk` remains below 1.0: `glayout==0.0.9` requires
+`gdsfactory==7.7.0`, which requires `gdstk<1`. Installing gdstk 1.x there would
+break dependency consistency. Use the independent project venv above for 1.x;
+upgrading the analog layout stack is deliberately outside this compatibility fix.
 
 The pinned Ubuntu KLayout `.deb` embeds Python **3.10**, regardless of `PATH`.
 Its GF180 PCells have a separate `/opt/klayout-pcells` venv containing `numpy<2`,
