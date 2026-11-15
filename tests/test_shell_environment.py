@@ -15,6 +15,14 @@ class ShellEnvironment(PdkContract):
         for mode in ['-lc', '-ic']:
             r = __import__('subprocess').run(['bash', '--noprofile', '--norc', mode, f'source "{CONFIG}/profile.sh"; type sak-pdk; test "$NIX_TEST" = 1; test -z "${{LD_LIBRARY_PATH+x}}"'], env=self.env, text=True, capture_output=True)
             self.assertEqual(r.returncode, 0, r.stderr)
+    def test_noninteractive_startup_has_clean_stdout(self):
+        self.env['BASH_ENV'] = str(CONFIG / 'ac3e-ic-toolbox-env.sh')
+        for pdk in ['ihp-sg13g2', 'gf180mcuD']:
+            self.env['PDK'] = pdk
+            r = self.bash("bash -c 'echo -n'")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(r.stdout, '')
+
     def test_hook_failure(self):
         designs = self.base / 'designs'
         designs.mkdir()
