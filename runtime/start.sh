@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+windows=0
+case $(uname -s) in
+    MINGW*|MSYS*|CYGWIN*) windows=1; root=$(cygpath -am -- "$root");;
+esac
+docker_env=()
+if (( windows )); then docker_env=(env MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'); fi
+# Scope conversion protection to Docker, never to Python/PowerShell helpers.
+docker() { command "${docker_env[@]}" docker "$@"; }
+docker_exec() { exec "${docker_env[@]}" docker "$@"; }
+execute_argv() {
+    if [[ ${argv[0]} == docker ]]; then docker_exec "${argv[@]:1}"
+    else exec "${argv[@]}"; fi
+}
 mode=${1:-shell}; shift || :
 json=0
 if [[ ${1:-} == --print-json ]]; then json=1; shift; fi
@@ -48,7 +61,8 @@ case $mode in
         fi;;
 esac
 designs=${DESIGNS:-${SHARED_DIR:-$root/shared}}
-[[ $designs == /* ]] || designs=$PWD/$designs
+if (( windows )); then designs=$(cygpath -am -- "$designs")
+else [[ $designs == /* ]] || designs=$PWD/$designs; fi
 [[ $designs != *,* ]] || { echo 'Docker bind paths cannot contain commas' >&2; exit 2; }
 if (( configure_shared )); then
     [[ $designs != *$'\n'* && $designs != *$'\r'* ]] || { echo 'Directory paths cannot contain line breaks' >&2; exit 2; }
@@ -72,8 +86,10 @@ with path.open('w') as stream:
     stream.write(text + 'SHARED_DIR=' + sys.argv[2] + '\n')
 PY
 fi
-uid=${CONTAINER_USER:-${USER_ID:-$(id -u)}}
-gid=${CONTAINER_GROUP:-${USER_GROUP:-$(id -g)}}
+default_uid=$(id -u); default_gid=$(id -g)
+if (( windows )); then default_uid=1000; default_gid=1000; fi
+uid=${CONTAINER_USER:-${USER_ID:-$default_uid}}
+gid=${CONTAINER_GROUP:-${USER_GROUP:-$default_gid}}
 [[ -z ${ROOT:-} ]] || { uid=0; gid=0; }
 [[ $uid =~ ^[0-9]+$ && $gid =~ ^[0-9]+$ ]] || { echo 'UID/GID must be numeric' >&2; exit 2; }
 project=$(jq -r .image.name "$root/manifest.json")
@@ -106,7 +122,14 @@ case $mode in
         if [[ $xserver == auto ]]; then
             xserver=native
             # Preserve WSLg; other WSL sessions use the Windows VcXsrv route.
-            if [[ -n ${WSL_INTEROP:-} && -z ${WAYLAND_DISPLAY:-} ]]; then xserver=vcxsrv; fi
+            if (( windows )); then
+                xserver=vcxsrv
+                # MSYS terminals may inherit another X server's dynamic display.
+                # Managed VcXsrv always uses display 0; native mode is the opt-out.
+                export DISPLAY=host.docker.internal:0
+            elif [[ -n ${WSL_INTEROP:-} && -z ${WAYLAND_DISPLAY:-} ]]; then
+                xserver=vcxsrv
+            fi
         fi
         case $xserver in
             vcxsrv)
@@ -116,7 +139,11 @@ case $mode in
                 export DISPLAY
                 argv+=(--env "LIBGL_ALWAYS_INDIRECT=${LIBGL_ALWAYS_INDIRECT:-1}")
                 if [[ ${DRY_RUN:-0} != 1 ]]; then
+                    if (( windows )) && [[ -n ${XAUTHORITY:-} ]]; then
+                        export XAUTHORITY=$(cygpath -am -- "$XAUTHORITY")
+                    fi
                     XAUTHORITY=$(python3 "$root/runtime/vcxsrv.py")
+                    if (( windows )); then XAUTHORITY=${XAUTHORITY%$'\r'}; fi
                 fi
                 ;;
             native) ;;
@@ -128,6 +155,7 @@ case $mode in
             argv+=(--mount type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix,readonly)
         fi
         auth=${XAUTHORITY:-$HOME/.Xauthority}
+        if (( windows )); then auth=$(cygpath -am -- "$auth"); fi
         if [[ -f $auth ]]; then argv+=(--mount "type=bind,source=$auth,target=/tmp/.Xauthority,readonly" --env XAUTHORITY=/tmp/.Xauthority); fi;;
     vnc) port "${VNC_PORT:-5901}" 5901; port "${HTTP_PORT:-${WEBSERVER_PORT:-8080}}" 80;;
     jupyter) port "${JUPYTER_PORT:-8888}" 8888;;
@@ -165,22 +193,66 @@ show() {
             else diagnostic+=("$arg"); hide_next=1; fi
         else diagnostic+=("$arg"); fi
     done
-    if (( json )); then python3 -c 'import json,sys; print(json.dumps(sys.argv[1:]))' "${diagnostic[@]}"
+    if (( json )); then printf '%s\0' "${diagnostic[@]}" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.buffer.read().decode().split("\0")[:-1]))'
     else printf '%q ' "${diagnostic[@]}"; printf '\n'; fi
 }
 if [[ ${DRY_RUN:-0} == 1 || $mode == print ]]; then show; exit 0; fi
 if [[ $mode == pull ]]; then
     [[ -z ${NO_PULL:-} ]] || exit 0
     docker image inspect "$reference" >/dev/null 2>&1 && exit 0
-    exec "${argv[@]}"
+    execute_argv
 fi
-if [[ $mode == build || $mode == push || $mode == rm || $mode == devcontainer ]]; then exec "${argv[@]}"; fi
+if [[ $mode == build || $mode == push || $mode == rm || $mode == devcontainer ]]; then execute_argv; fi
 # Exact-name lookup. Replacements require consent and an available target image.
 image_ready=0
 existing=$(docker container ls -a --format '{{.Names}}')
 if printf '%s\n' "$existing" | python3 -c 'import sys; sys.exit(0 if sys.argv[1] in sys.stdin.read().splitlines() else 1)' "$name"; then
     state=$(docker container inspect "$name")
+    # A failed Windows create can retain converted entrypoint/bind arguments.
+    # Never offer this shortcut for a container that has ever been started.
+    if (( windows )) && [[ $mode != test ]] && jq -e '.[0].State |
+        .Status == "created" and .Running == false and
+        (.StartedAt | startswith("0001-01-01T00:00:00")) and
+        ((.Error // "") | length > 0)' <<< "$state" >/dev/null; then
+        printf 'Container %s failed during creation and never started.\n' "$name" >&2
+        if [[ ! -t 0 ]]; then
+            printf 'Run the launcher interactively to confirm recreation, or inspect and explicitly remove it:\n  docker container inspect %q\n  docker container rm %q\nThen rerun the launcher. Removal discards internal files; mounted designs are preserved.\n' "$name" "$name" >&2
+            exit 2
+        fi
+        printf 'Recreate it with the corrected Windows settings? This removes internal files; mounted designs are preserved. [y/N]: ' >&2
+        IFS= read -r answer || answer=
+        case $answer in y|Y|yes|YES) ;; *) echo 'Container kept unchanged.' >&2; exit 0;; esac
+        # Resolve the image and bind directory before removing anything. No force.
+        if ! docker image inspect "$reference" >/dev/null 2>&1; then
+            [[ -z ${NO_PULL:-} ]] || { echo 'Requested image is missing and NO_PULL is set.' >&2; exit 2; }
+            docker image pull "$reference"
+        fi
+        mkdir -p -- "$designs"
+        docker container rm "$name"
+        execute_argv
+    fi
+    if (( windows )); then
+        # Docker Desktop may report native paths or its VM's host-mount prefix.
+        state=$(python3 -c '
+import json, ntpath, re, sys
+state = json.load(sys.stdin)
+def canonical(path):
+    path = path.replace("\\", "/")
+    for prefix in ("/run/desktop/mnt/host", "/host_mnt", "/mnt/host"):
+        if path.startswith(prefix + "/"):
+            path = path[len(prefix):]
+            break
+    path = re.sub(r"^/([a-zA-Z])(?=/)", r"\1:", path)
+    return ntpath.normcase(ntpath.normpath(path))
+for mount in state[0].get("Mounts", []):
+    for expected in sys.argv[1:]:
+        if expected and canonical(mount.get("Source", "")) == canonical(expected):
+            mount["Source"] = expected
+print(json.dumps(state))
+' "$designs" "${auth:-}" <<< "$state")
+    fi
     metadata=$(python3 -c 'import json,sys; c=json.load(sys.stdin)[0]; print(c["Config"]["Image"]); print(int(c["State"]["Running"])); print(int(any(m.get("Source")==sys.argv[1] and m.get("Destination")=="/home/designer/shared" for m in c.get("Mounts",[]))))' "$designs" <<< "$state")
+    if (( windows )); then metadata=${metadata//$'\r'/}; fi
     mapfile -t fields <<< "$metadata"
     current_reference=${fields[0]}
     running=${fields[1]}
@@ -223,7 +295,7 @@ if printf '%s\n' "$existing" | python3 -c 'import sys; sys.exit(0 if sys.argv[1]
             update_reason="to the locally installed image for $reference"
         elif [[ $(jq '.[0].RepoDigests // [] | length' <<< "$local_image") -gt 0 ]]; then
             # Metadata only; never download layers before the user agrees.
-            if remote_manifest=$(timeout 10 docker buildx imagetools inspect "$reference" --format '{{json .Manifest}}' 2>/dev/null); then
+            if remote_manifest=$(timeout 10 "${docker_env[@]}" docker buildx imagetools inspect "$reference" --format '{{json .Manifest}}' 2>/dev/null); then
                 remote_digest=$(jq -r '.digest // empty' <<< "$remote_manifest")
                 if [[ -n $remote_digest ]] && ! jq -e --arg digest "$remote_digest" '.[0].RepoDigests // [] | any(endswith("@" + $digest))' <<< "$local_image" >/dev/null; then
                     update_reason="to the published update for $reference"
@@ -255,13 +327,13 @@ if printf '%s\n' "$existing" | python3 -c 'import sys; sys.exit(0 if sys.argv[1]
     else
         if [[ $running == 1 ]]; then
             case $mode in
-                shell|x|attach) if (( $# )); then exec docker exec -it "$name" "$@"; else exec docker exec -it "$name" /bin/bash; fi;;
+                shell|x|attach) if (( $# )); then docker_exec exec -it "$name" "$@"; else docker_exec exec -it "$name" /bin/bash; fi;;
                 vnc|jupyter) printf 'Container %s is already running.\n' "$name"; exit 0;;
             esac
         fi
         case $mode in
-            shell|x|attach) exec docker container start -ai "$name";;
-            vnc|jupyter) exec docker container start "$name";;
+            shell|x|attach) docker_exec container start -ai "$name";;
+            vnc|jupyter) docker_exec container start "$name";;
         esac
     fi
 fi
@@ -275,4 +347,4 @@ if [[ $mode == test ]]; then
     printf '%s\n' "$reference" > "$root/tests/run/image-reference.txt"
     printf 'Testing image %s (%s)\n' "$reference" "$(< "$root/tests/run/image-id.txt")"
 fi
-exec "${argv[@]}"
+execute_argv

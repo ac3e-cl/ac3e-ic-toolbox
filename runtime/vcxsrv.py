@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare private X11 authorization and start VcXsrv through WSL interop."""
+"""Prepare private X11 authorization and start VcXsrv on Windows or via WSL."""
 import os
 from pathlib import Path
 import secrets
@@ -9,6 +9,8 @@ import sys
 
 
 def windows_path(path):
+    if os.name == 'nt':
+        return str(Path(path).resolve())
     return subprocess.check_output(['wslpath', '-w', str(path)], text=True).strip()
 
 
