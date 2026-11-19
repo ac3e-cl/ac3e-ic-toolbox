@@ -27,7 +27,7 @@ fi
 rm -rf "${RUN_DIR}"
 mkdir -p "${RUN_DIR}"
 
-echo ">>> Smoke test ngspice con MOSFET IHP"
+echo ">>> ngspice smoke test with an IHP MOSFET"
 if ! ngspice -b "${NETLIST}" >"${LOG_FILE}" 2>&1; then
 	cat "${LOG_FILE}" >&2
 	fail "ngspice exited with a non-zero status"

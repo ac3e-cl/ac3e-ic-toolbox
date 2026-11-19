@@ -1,69 +1,69 @@
-# Plan de reducción de tamaño de la imagen
+# Image size reduction plan
 
-## Alcance y evidencia
+## Scope and evidence
 
-El análisis y las referencias de líneas siguientes describen el baseline previo
-al recorte; algunos archivos SKY citados ya se retiraron en `dev/no-sky`.
+The analysis and line references below describe the baseline before trimming;
+some cited SKY files have already been removed in `dev/no-sky`.
 
-### Estado de implementación en `dev/no-sky`
+### Implementation status in `dev/no-sky`
 
-- SKY general y plantilla privada retirados de la composición de la única imagen.
-- La exclusión de SKY es temporal para analizar espacio antes de reincorporarlo
-  en una versión posterior. Sus tests, datos y helpers se conservan: las suites
-  normal y completa los reportan como `EXCLUDED`; los tests host del adaptador
-  llevan `unittest.skip`. No se borran ni se contabilizan como aprobados.
-- IHP, GF y LibreLane global conservados, sin cambiar sus revisiones.
-- ORFS sin descarga de submódulos fuente ni historial Git en el árbol distribuido.
-- CPython 3.11.18 añadido en `/opt/python`, con paquetes EDA en `/opt/eda-venv` y
-  precedencia para el usuario. Ubuntu 22.04 y `/usr/bin/python3` permanecen intactos;
-  las herramientas Nix y sus intérpretes aislados no se reemplazan.
-- Contratos host y sintaxis verificados; falta construir y ejecutar la imagen.
-  El intento con `BUILD_IMAGE_TAG=isaiash/ac3e-ic-toolbox:dev-no-sky` falló por
-  permisos del socket Docker antes de ejecutar stages. No se han creado commits.
-  No se declara todavía ningún ahorro real del build nuevo.
+- General SKY and its private template removed from the single image's composition.
+- SKY exclusion is temporary, to analyze space before reintroducing it in a later
+  release. Its tests, data and helpers are preserved: regular and full suites
+  report them as `EXCLUDED`; adapter host tests use `unittest.skip`.
+  They are neither deleted nor counted as passing.
+- IHP, GF and global LibreLane retained without changing their revisions.
+- ORFS distributed tree no longer downloads source submodules or contains Git history.
+- CPython 3.11.18 added under `/opt/python`, with EDA packages in `/opt/eda-venv`
+  and user-facing precedence. Ubuntu 22.04 and `/usr/bin/python3` remain intact;
+  Nix tools and their isolated interpreters are not replaced.
+- Host contracts and syntax verified; image build and execution remain pending.
+  The attempt with `BUILD_IMAGE_TAG=isaiash/ac3e-ic-toolbox:dev-no-sky` failed on
+  Docker socket permissions before any stages ran. No commits have been created.
+  No actual savings from the new build are claimed yet.
 
-El resultado previsto es **una sola imagen**, conservando IHP y GF y priorizando
-la retirada de SKY. No se proponen variantes por PDK, imágenes complementarias ni
-descargas diferidas como sustituto de reducir la imagen distribuida.
-El criterio de prioridad es ahorrar del orden de **1 GiB o más por intervención**,
-no acumular limpiezas de unos pocos MB. No se cambian los pins para adelgazar la imagen.
+The intended result is **one image**, retaining IHP and GF and prioritizing SKY
+removal. Per-PDK variants, supplementary images and deferred downloads are not
+proposed as substitutes for reducing the distributed image.
+The priority criterion is savings on the order of **1 GiB or more per intervention**,
+not accumulating cleanups of a few MB. Pins are not changed to slim the image.
 
-Se revisaron el Dockerfile, el manifiesto, los instaladores de PDKs y LibreLane,
-la configuración de ejecución y los contratos/tests relacionados.
+The Dockerfile, manifest, PDK and LibreLane installers, runtime configuration
+and related contracts/tests were reviewed.
 
-El daemon Docker local no fue accesible: permiso denegado sobre su socket y
-`sudo -n` requiere contraseña. Por tanto, **no se midió la imagen local de 11 GB**.
-Como alternativa se consultaron el manifiesto OCI y el historial de configuración
-de la imagen pública `docker.io/isaiash/ac3e-ic-toolbox:0.2.0`, plataforma linux/amd64:
+The local Docker daemon was inaccessible: permission denied on its socket and
+`sudo -n` requires a password. Therefore, **the local 11 GB image was not measured**.
+As an alternative, the OCI manifest and configuration history of the public image
+`docker.io/isaiash/ac3e-ic-toolbox:0.2.0`, platform linux/amd64, were inspected:
 
-- Manifiesto de plataforma: `sha256:340fa40e9953e52d0623a126b38a19faf7541f00e09ff6a20a7394481969d4b4`.
-- Configuración: `sha256:b8e85480371741df6418fc9675c376692797fd6a741a0484e719dcaa7fb56977`.
-- Fecha de creación registrada: `2026-10-18T14:34:34.937636488Z`.
-- Suma de blobs de capas comprimidas: **12 932 857 565 bytes = 12,045 GiB**.
+- Platform manifest: `sha256:340fa40e9953e52d0623a126b38a19faf7541f00e09ff6a20a7394481969d4b4`.
+- Configuration: `sha256:b8e85480371741df6418fc9675c376692797fd6a741a0484e719dcaa7fb56977`.
+- Recorded creation date: `2026-10-18T14:34:34.937636488Z`.
+- Sum of compressed layer blobs: **12 932 857 565 bytes = 12.045 GiB**.
 
-Esta referencia publicada no debe identificarse automáticamente con la imagen
-local mencionada. Tampoco se deben comparar GB decimales, GiB, tamaño comprimido,
-sistema de archivos visible y tamaño acumulado de capas como si fueran equivalentes.
+This published reference must not automatically be identified with the local
+image mentioned. Decimal GB, GiB, compressed size, visible filesystem size and
+cumulative layer size must not be compared as though equivalent.
 
-### Bloques grandes medidos en el registro
+### Large blocks measured in the registry
 
-| Instrucción / contenido | GiB comprimidos | Qué demuestra |
+| Instruction / content | Compressed GiB | What it establishes |
 | --- | ---: | --- |
-| Instalación de las tres plantillas LibreLane | 5,155 | Es el mayor bloque; incluye entornos Nix y PDKs privados juntos, no solo SKY. |
-| Copia de `/opt/pdks` desde `open_pdks` | 2,016 | SKY y GF generales juntos. No permite atribuir 2 GiB a SKY solamente. |
-| Copia de `/opt/OpenROAD-flow-scripts` | 1,869 | ORFS completo es una oportunidad real, no una optimización de MB. |
-| Instalación del LibreLane global con Nix | 1,471 | Un cuarto entorno LibreLane, además de los tres de las plantillas. |
+| Installation of all three LibreLane templates | 5.155 | Largest block; includes Nix environments and private PDKs together, not just SKY. |
+| Copy of `/opt/pdks` from `open_pdks` | 2.016 | General SKY and GF together. Does not attribute 2 GiB to SKY alone. |
+| Copy of `/opt/OpenROAD-flow-scripts` | 1.869 | Complete ORFS is a real opportunity, not an MB-scale optimization. |
+| Global LibreLane installation with Nix | 1.471 | A fourth LibreLane environment in addition to the three template environments. |
 
-Son pesos actuales de capas, **no ahorros garantizados de limpiezas parciales**.
-Los ahorros de opciones que comparten Nix no son aditivos: el store ya comparte
-rutas idénticas; distintas revisiones y derivaciones pueden necesitar rutas distintas.
+These are current layer sizes, **not guaranteed savings from partial cleanup**.
+Savings from options sharing Nix are not additive: the store already shares
+identical paths; different revisions and derivations may need different paths.
 
-## Análisis comparativo de las plantillas: coste marginal, no suma de tamaños
+## Template comparison: marginal cost, not sum of sizes
 
-Se descargaron los `flake.lock` y `flake.nix` de IHP y GF en los commits exactos
-de `manifest.json`, el lock del LibreLane global y se compararon con el adaptador
-SKY del repositorio. Se verificó igualdad de los objetos `locked`, incluido
-`narHash`, no solamente los nombres de los inputs.
+IHP and GF `flake.lock` and `flake.nix` files at the exact `manifest.json` commits
+and the global LibreLane lock were downloaded and compared with the repository's
+SKY adapter. Equality of `locked` objects, including `narHash`, was verified,
+not just input names.
 
 | Input | IHP | GF | SKY | Global |
 | --- | --- | --- | --- | --- |
@@ -72,206 +72,208 @@ SKY del repositorio. Se verificó igualdad de los objetos `locked`, incluido
 | Ciel | `1d2526e67a06…` | `1d2526e67a06…` | `afcb23d36861…` | `6978e6b37970…` |
 | devshell | `a67c0f87b63b…` | `a67c0f87b63b…` | `255a2b1725a2…` | `255a2b1725a2…` |
 
-Fuentes reproducibles para esta comparación:
+Reproducible sources for this comparison:
 
-- [Lock IHP](https://raw.githubusercontent.com/IHP-GmbH/ihp-sg13-librelane-template/23c62045bb212175c20d8186a7ab308e15fba98c/flake.lock).
-- [Lock GF](https://raw.githubusercontent.com/wafer-space/gf180mcu-project-template/33e4b5ecc9faac82787fa7cb205f08377e27b912/flake.lock).
-- [Lock global](https://raw.githubusercontent.com/librelane/librelane/ca6adb1e2982cd75445a68b632d461213d8ca421/flake.lock).
-- SKY: `images/librelane/sky/flake.lock` y `flake.nix`.
+- [IHP lock](https://raw.githubusercontent.com/IHP-GmbH/ihp-sg13-librelane-template/23c62045bb212175c20d8186a7ab308e15fba98c/flake.lock).
+- [GF lock](https://raw.githubusercontent.com/wafer-space/gf180mcu-project-template/33e4b5ecc9faac82787fa7cb205f08377e27b912/flake.lock).
+- [Global lock](https://raw.githubusercontent.com/librelane/librelane/ca6adb1e2982cd75445a68b632d461213d8ca421/flake.lock).
+- SKY: `images/librelane/sky/flake.lock` and `flake.nix`.
 
-### Qué se comparte y qué no
+### What is shared and what is not
 
-**IHP y GF aprovechan una misma base de paquetes**, también utilizada por el
-LibreLane global. Comparten exactamente nixpkgs, Ciel y devshell; sus shells
-solicitan utilidades y simuladores similares. Esto permite compartir derivaciones
-idénticas de la base. No demuestra identidad de toda su clausura: tienen distintos
-LibreLane y nix-eda. Como comprobación adicional, las recetas `nix/klayout.nix`
-de ambos nix-eda tienen el mismo blob Git, pero `nix/yosys.nix` difiere. Incluso
-una receta idéntica puede producir otra derivación si cambia un input u overlay.
+**IHP and GF use the same package base**, also used by global LibreLane.
+They share exactly the same nixpkgs, Ciel and devshell; their shells request
+similar utilities and simulators. This allows identical base derivations to be
+shared. It does not demonstrate identical complete closures: they have different
+LibreLane and nix-eda revisions. As an additional check, the `nix/klayout.nix`
+recipes in both nix-eda revisions have the same Git blob, but `nix/yosys.nix`
+differs. Even an identical recipe can produce a different derivation if an input
+or overlay changes.
 
-**SKY es el conjunto menos alineado con el resto:** usa otro nixpkgs, otro
-nix-eda y otro Ciel. Además, el adaptador fuerza Python 3.11 y una derivación
-KLayout 0.29.12, modifica los wrappers Python de Yosys/OpenROAD e incluye un venv
-con requirements propios de Tiny Tapeout (`images/librelane/sky/flake.nix:16-45`
-y `bootstrap.sh:18-23`). Esto incorpora una segunda familia de dependencias con
-menor posibilidad de reutilización. SKY no es totalmente independiente: por
-ejemplo, su devshell coincide con el global, y algunas rutas podrían compartirse.
+**SKY is the least aligned with the rest:** it uses different nixpkgs, nix-eda
+and Ciel revisions. The adapter also forces Python 3.11 and a KLayout 0.29.12
+derivation, modifies Yosys/OpenROAD Python wrappers and includes a venv with
+Tiny Tapeout-specific requirements (`images/librelane/sky/flake.nix:16-45`
+and `bootstrap.sh:18-23`). This adds a second dependency family with less scope
+for reuse. SKY is not entirely independent: for example, its devshell matches
+the global one, and some paths may be shared.
 
-**Conclusión para decidir el recorte:** SKY es el primer candidato a retirar por
-su coste marginal estructuralmente menos aprovechado. Mantener IHP y GF conserva
-dos tecnologías sobre una base común. No hay evidencia suficiente para afirmar
-que el total exclusivo de SKY en bytes ya está demostrado como el mayor: un
-PDK GF grande podría alterar el ranking aunque su entorno comparta más paquetes.
-La capa conjunta de 5,155 GiB no permite separar las tres contribuciones.
+**Conclusion for choosing the reduction:** SKY is the first removal candidate
+because its marginal structural cost is less reusable. Keeping IHP and GF retains
+two technologies on a common base. Evidence is insufficient to claim that SKY's
+exclusive byte total has already been proven largest: a large GF PDK could alter
+the ranking even if its environment shares more packages. The combined 5.155 GiB
+layer does not separate the three contributions.
 
-### Medición necesaria para cerrar el ranking en bytes
+### Measurement needed to finalize the byte ranking
 
-Para cada plantilla T, obtener su clausura de rutas Nix y restar la unión de las
-rutas requeridas por **todos los demás roots conservados**, incluido LibreLane
-global y el propio Nix. Sumar `narSize` de las rutas exclusivas y, por separado,
-los bytes de su PDK privado, checkout y venv fuera de Nix. No sumar tres tamaños
-de clausura completos, ni confundir fuentes de flakes con clausuras de ejecución.
+For each template T, obtain its Nix path closure and subtract the union of paths
+required by **all other retained roots**, including global LibreLane and Nix
+itself. Sum `narSize` for exclusive paths and, separately, bytes in its private
+PDK, checkout and venv outside Nix. Do not sum three complete closure sizes or
+confuse flake sources with runtime closures.
 
-El informe debe mostrar para SKY, IHP y GF: clausura total, bytes compartidos,
-bytes exclusivos, PDK privado y recursos auxiliares. La retirada del SKY general
-se mide aparte, pues no pertenece a la plantilla. `narSize` permite comparar
-contenido Nix, pero el ahorro distribuido definitivo lo confirma el build y su
-manifiesto comprimido. Esta medición requiere acceso a la imagen/store existente;
-el socket Docker sigue sin permisos y no hay Nix local disponible.
+For SKY, IHP and GF, the report must show total closure, shared bytes, exclusive
+bytes, private PDK and auxiliary resources. Measure general SKY removal
+separately, since it does not belong to the template. `narSize` compares Nix
+content, but the build and its compressed manifest confirm final distributed
+savings. This measurement requires access to the existing image/store;
+Docker socket permissions are still unavailable and there is no local Nix.
 
-## 1. Retirar SKY de la única imagen, conservando IHP y GF
+## 1. Remove SKY from the single image, retaining IHP and GF
 
-La intervención prioritaria es omitir Tiny Tapeout SKY junto con su adaptador,
-venv, PDK privado y dependencias Nix exclusivas. Para maximizar el recorte de SKY,
-el plan también contempla no distribuir su PDK general. Son dos ahorros distintos:
-el primero evita el entorno menos compartido; el segundo retira datos de PDK.
+The priority intervention is to omit Tiny Tapeout SKY together with its adapter,
+venv, private PDK and exclusive Nix dependencies. To maximize SKY reduction,
+the plan also considers not distributing its general PDK. These are distinct
+savings: the first avoids the least-shared environment; the second removes PDK data.
 
-Actualmente hay dos instalaciones independientes:
+There are currently two independent installations:
 
-- SKY general: `Dockerfile:242-248,258-262,492`; el enlace público apunta al backing
-  de Volare. `images/pdks/install_sky130.sh:24-29` ya elimina SKY130B y las rutas
-  `.build`/`.source` indicadas. No contabilizar nuevamente esa limpieza.
-- SKY privado: `images/librelane/install.sh:26-47` crea adaptador, venv, entorno Nix
-  y PDK Ciel bajo `/opt/librelane-templates`.
+- General SKY: `Dockerfile:242-248,258-262,492`; the public link points to Volare
+  backing. `images/pdks/install_sky130.sh:24-29` already removes SKY130B and the
+  indicated `.build`/`.source` paths. Do not count that cleanup again.
+- Private SKY: `images/librelane/install.sh:26-47` creates an adapter, venv, Nix
+  environment and Ciel PDK under `/opt/librelane-templates`.
 
-Cambios previstos, sin crear mecanismos de variantes:
+Planned changes, without introducing variant mechanisms:
 
-1. Ajustar el conjunto soportado de plantillas a IHP/GF en manifiesto e instalador.
-   Hoy el instalador exige exactamente `ihp`, `gf`, `sky` (`install.sh:12,20`).
-2. Retirar la rama SKY del instalador y los recursos del adaptador que dejen de
-   tener consumidores. Mantener intactos los locks y PDKs privados de IHP/GF.
-3. Hacer que la composición final de `open_pdks` no dependa de `sky130_pdk` ni copie
-   su backing. No quitar Magic: también sirve para los PDKs conservados.
-4. Excluir SKY desde el principio del build. No instalarlo para borrarlo después,
-   ni hacer GC en una capa posterior esperando recuperar capas ya distribuidas.
-5. Actualizar launcher, inventario, documentación y tests para anunciar IHP/GF como
-   conjunto soportado. No ocultar fallos ni afirmar cobertura SKY ya retirada.
-6. Validar los flujos IHP/GF y medir el ahorro marginal total, separando plantilla
-   SKY de PDK general SKY. No atribuirle la capa completa de las tres plantillas.
+1. Adjust the supported template set to IHP/GF in the manifest and installer.
+   The installer currently requires exactly `ihp`, `gf`, `sky` (`install.sh:12,20`).
+2. Remove the SKY installer branch and adapter resources with no remaining
+   consumers. Keep IHP/GF private locks and PDKs intact.
+3. Make the final `open_pdks` composition independent of `sky130_pdk` and omit
+   its backing. Do not remove Magic: it also serves retained PDKs.
+4. Exclude SKY from the start of the build. Do not install it and then delete it,
+   or run GC in a later layer expecting to recover already distributed layers.
+5. Update launcher, inventory, documentation and tests to advertise IHP/GF as
+   the supported set. Do not hide failures or claim removed SKY coverage.
+6. Validate IHP/GF flows and measure total marginal savings, separating the SKY
+   template from the general SKY PDK. Do not attribute the entire three-template
+   layer to SKY.
 
-Efecto funcional explícito: la única imagen deja de incluir soporte PDK SKY y
-Tiny Tapeout SKY listo para usar. Conserva IHP/GF y sus entornos aislados. La
-retirada está implementada en el código; aún falta validarla en la imagen construida.
-No sustituir silenciosamente PDKs privados por los generales: sus pins difieren.
+Explicit functional effect: the single image no longer includes SKY PDK support
+or ready-to-use Tiny Tapeout SKY. It retains IHP/GF and their isolated environments.
+Removal is implemented in code; validation in the built image remains pending.
+Do not silently replace private PDKs with general ones: their pins differ.
 
-## 2. ORFS de ejecución sin repositorios de compilación
+## 2. Runtime ORFS without build repositories
 
-**Objetivo:** eliminar del orden de GB de fuentes e historial que hoy se distribuyen
-sin ser necesarios para usar los binarios ya compilados.
+**Objective:** remove GB-scale source and history currently distributed despite
+being unnecessary for using the compiled binaries.
 
-Evidencia:
+Evidence:
 
-- `images/orfs/install.sh:7-17` clona ORFS y todos sus submódulos recursivamente.
-- `images/orfs/install.sh:19-22` deja comentada la eliminación de `.git`.
-- `Dockerfile:516` copia el árbol completo al runtime.
-- El OpenROAD ejecutable ya se instala por separado (`Dockerfile:515`), al igual
-  que Yosys (`Dockerfile:514`).
-- Se consultaron los árboles Git upstream de las revisiones exactas: ORFS
-  `40674dd5cf48db6dc9028d6ab5a98f107208f5bb` referencia OpenROAD
-  `83ff25699764e58118fc536056a34326b22cba8f`. Solo los blobs versionados de ese
-  submódulo OpenROAD suman **1,340 GiB lógicos**, antes de su `.git` y de sus
-  propios submódulos. Esto no es una estimación del tamaño comprimido.
-- En el ORFS principal, `flow/platforms` suma 0,738 GiB y `flow/designs` 0,267 GiB
-  lógicos. No son todos basura: contienen plataformas y ejemplos utilizables.
+- `images/orfs/install.sh:7-17` clones ORFS and all submodules recursively.
+- `images/orfs/install.sh:19-22` leaves `.git` removal commented out.
+- `Dockerfile:516` copies the entire tree into the runtime.
+- The OpenROAD executable is already installed separately (`Dockerfile:515`),
+  as is Yosys (`Dockerfile:514`).
+- Upstream Git trees at the exact revisions were inspected: ORFS
+  `40674dd5cf48db6dc9028d6ab5a98f107208f5bb` references OpenROAD
+  `83ff25699764e58118fc536056a34326b22cba8f`. The tracked blobs in that OpenROAD
+  submodule alone total **1.340 logical GiB**, before its `.git` and its own
+  submodules. This is not an estimate of compressed size.
+- In the main ORFS repository, `flow/platforms` totals 0.738 logical GiB and
+  `flow/designs` 0.267 logical GiB. Not all are waste: they contain usable
+  platforms and examples.
 
-Cambios previstos:
+Planned changes:
 
-1. Revisar usos de `tools/` y Git en los targets ORFS soportados, no solo el test de síntesis.
-2. Preparar un árbol de distribución ORFS en su stage, sin inicializar/copiando
-   fuera los submódulos de compilación OpenROAD, Yosys y yosys-slang cuando los
-   targets soportados usen los ejecutables instalados. Conservar los recursos de
-   ejecución que esa revisión realmente referencie.
-3. Excluir los metadatos Git, incluidos los de submódulos, **antes del COPY final**.
-   Registrar los SHAs como metadatos de procedencia en lugar de conservar el historial.
-4. Conservar inicialmente Makefiles, `flow/scripts`, `flow/util` y plataformas.
-   No recortar bibliotecas por extensión. Si se decide retirar plataformas o
-   ejemplos completos, hacerlo como una decisión de funcionalidad separada.
+1. Review `tools/` and Git usage in supported ORFS targets, not just the synthesis test.
+2. Prepare an ORFS distribution tree in its stage without initializing or copying
+   OpenROAD, Yosys and yosys-slang build submodules when supported targets use
+   installed executables. Retain runtime resources actually referenced by that revision.
+3. Exclude Git metadata, including submodule metadata, **before the final COPY**.
+   Record SHAs as provenance metadata rather than retaining history.
+4. Initially retain Makefiles, `flow/scripts`, `flow/util` and platforms.
+   Do not trim libraries by extension. If entire platforms or examples are
+   removed, make that a separate functionality decision.
 
-Validación: `tests/digital/test-orfs.sh`, más un flujo físico completo pequeño
-sobre las plataformas que se declare soportar. El test actual solo prueba síntesis
-Nangate45 y no valida por sí solo todo ORFS. Medir el nuevo COPY y el delta total.
+Validation: `tests/digital/test-orfs.sh`, plus a small complete physical flow on
+platforms declared supported. The current test only exercises Nangate45 synthesis
+and does not validate all ORFS by itself. Measure the new COPY and total delta.
 
-## 3. LibreLane global: conservar inicialmente; evaluar solo su coste exclusivo
+## 3. Global LibreLane: retain initially; evaluate only its exclusive cost
 
-El perfil global se instala en `Dockerfile:625-628` y las plantillas en
-`Dockerfile:640-642`. El launcher de plantillas ejecuta su propio entorno y PDK
-(`images/librelane/librelane-template:30-37`), no necesita resolver el comando
-LibreLane desde el perfil global.
+The global profile is installed in `Dockerfile:625-628`, and templates in
+`Dockerfile:640-642`. The template launcher executes its own environment and PDK
+(`images/librelane/librelane-template:30-37`); it does not need to resolve the
+LibreLane command from the global profile.
 
-La política base del plan es conservar LibreLane global junto con las plantillas
-IHP/GF en la misma imagen. Su nixpkgs coincide con ambas: su capa de **1,471 GiB**
-no equivale a otros tantos GiB recuperables al retirarlo, porque IHP/GF podrían
-tener que incorporar parte de esas rutas. No se propone eliminarlo por su peso
-bruto. Solo reconsiderarlo si se mide al menos 1 GiB exclusivo y se acepta perder
-el perfil global; nunca convertirlo en otra imagen ni reemplazar locks de IHP/GF.
+The plan's baseline policy retains global LibreLane alongside IHP/GF templates
+in the same image. Its nixpkgs matches both: its **1.471 GiB** layer does not
+equal recoverable GiB on removal, because IHP/GF may need to add some of those
+paths. Removal based on gross size is not proposed. Reconsider only if at least
+1 GiB of exclusive content is measured and losing the global profile is accepted;
+never turn it into another image or replace IHP/GF locks.
 
-No intentar hacer compartir bibliotecas Ubuntu a binarios Nix a través de PATH,
-PYTHONPATH o LD_LIBRARY_PATH. No unificar locks ni cambiar versiones sin un trabajo
-separado de compatibilidad. El pin y aislamiento actuales son deliberados.
+Do not try to make Nix binaries share Ubuntu libraries through PATH, PYTHONPATH
+or LD_LIBRARY_PATH. Do not unify locks or change versions without separate
+compatibility work. Current pinning and isolation are deliberate.
 
-Si se retira el perfil global, revisar precedencia PATH, activación Nix y pruebas
-que hoy esperan el comando global. Ejecutar pruebas digitales nativas y flujos
-completos de las plantillas conservadas; respetar el fallo upstream IHP documentado,
-sin convertirlo en PASS ni desactivar DRC para adelgazar la imagen.
+If the global profile is removed, review PATH precedence, Nix activation and
+tests currently expecting the global command. Run native digital tests and full
+flows for retained templates; respect the documented upstream IHP failure,
+without converting it to PASS or disabling DRC to slim the image.
 
-## 4. Residuos y fuentes Nix/PDK — promoción condicionada a medir al menos 1 GiB
+## 4. Nix/PDK leftovers and sources — proceed only after measuring at least 1 GiB
 
-No hay evidencia suficiente para prometer GB extra por un `find ... -delete`.
-La investigación debe concentrarse dentro de los bloques grandes medidos:
+Evidence is insufficient to promise extra GB from a `find ... -delete`.
+Investigation must focus inside the measured large blocks:
 
-- GF general conserva backing y source caches expresamente
-  (`images/pdks/install_gf180mcu.sh:30-38`). Inventariar tamaños reales y recorrer
-  enlaces transitivamente antes de considerar sobrantes. GF180D depende del
-  backing A; `images/pdks/gf180_integrity.py` y `tests/test_gf_cleanup.py` protegen
-  precisamente ese caso. No borrar A/B/C o caches por su nombre.
-- Para Nix, identificar la unión de clausuras de todos los perfiles/roots que
-  permanezcan: perfil de Nix, perfil global, perfiles GF/IHP y rutas referenciadas
-  por los scripts de activación. No conservar roots de SKY retirados.
-  Comparar con el store total e inspeccionar roots y caches.
-- Solo si hay al menos 1 GiB realmente prescindible, preparar un stage de exportación
-  de las clausuras necesarias, su registro Nix y recursos de ejecución, o instalar
-  y limpiar dentro del mismo RUN. Validar activación sin red, UID arbitrario y que
-  Nix siga operativo. No borrar derivaciones/fuentes activas a ciegas.
-- Ejecutar GC en una capa posterior no elimina bytes de capas inferiores.
-  No usar `nix-store --optimise` como sustituto de excluir contenido: hardlinks
-  entre capas no garantizan reducción de los blobs distribuidos.
+- General GF explicitly retains backing and source caches
+  (`images/pdks/install_gf180mcu.sh:30-38`). Inventory actual sizes and follow
+  links transitively before considering anything redundant. GF180D depends on
+  A backing; `images/pdks/gf180_integrity.py` and `tests/test_gf_cleanup.py`
+  protect exactly that case. Do not delete A/B/C or caches based on names.
+- For Nix, identify the union of closures of all remaining profiles/roots:
+  Nix profile, global profile, GF/IHP profiles and paths referenced by activation
+  scripts. Do not retain removed SKY roots. Compare against the entire store
+  and inspect roots and caches.
+- Only if at least 1 GiB is genuinely unnecessary, prepare a stage exporting
+  required closures, their Nix registration and runtime resources, or install
+  and clean within the same RUN. Validate offline activation, arbitrary UIDs
+  and continued Nix operation. Do not blindly delete active derivations/sources.
+- Running GC in a later layer does not remove bytes from lower layers.
+  Do not use `nix-store --optimise` as a substitute for excluding content:
+  cross-layer hardlinks do not guarantee smaller distributed blobs.
 
-Esta fase no cuenta como ahorro obtenido ni como cambio aprobado hasta medirla.
+This phase counts as neither achieved savings nor an approved change until measured.
 
-## Secuencia y criterios de aceptación
+## Sequence and acceptance criteria
 
-1. **Baseline local:** identificar tag/ID exacto de los 11 GB; medir con
+1. **Local baseline:** identify the exact tag/ID of the 11 GB image; measure with
    `docker image inspect`, `docker history --no-trunc`, `du -x`/`du -x --apparent-size`
-   sin seguir enlaces por duplicado y consultas de clausuras Nix. Guardar bytes,
-   plataforma, pins y métrica. El manifiesto remoto anterior sirve como referencia,
-   no reemplaza ese baseline local.
-2. **Atribución por plantilla:** calcular el coste marginal SKY/IHP/GF como se
-   describe arriba; registrar qué parte es entorno y qué parte es PDK privado.
-3. **Primer cambio:** excluir SKY privado y su entorno; medir. Excluir también el
-   SKY general como segundo paso del mismo recorte; medir por separado. Verificar
-   ausencia de dependencias de build y contenido, no solo de enlaces públicos.
-4. **Segundo cambio:** ORFS runtime-only, conservando los recursos utilizados.
-5. **Solo con evidencia:** residuos Nix/PDK de escala GB; el perfil LibreLane global
-   no se retira por defecto ni se cambia la compatibilidad de IHP/GF para deduplicar.
-6. Validar revisiones sucesivas del mismo producto. Un tag temporal de comprobación
-   no constituye una variante distribuida: el resultado es una única imagen con
-   IHP/GF. No sobrescribir/publicar el tag estable antes de validar. Comparar cada
-   delta y el combinado con la misma métrica; no sumar estimaciones.
-7. Ejecutar comprobaciones estáticas, tests de contratos actualizados y la suite
-   de integración para capacidades conservadas. Ejecutar explícitamente los flujos
-   largos pertinentes: no pertenecen todos a la suite habitual. Para pruebas de
-   layout dependientes de SKY, crear cobertura equivalente con PDK conservado o
-   marcar la capacidad retirada; no afirmar que se validó SKY en una imagen sin él.
-8. Aceptar intervenciones de tamaño solo cuando el delta real alcance el orden de
-   GB y no rompa funcionalidades declaradas. Registrar también tamaño comprimido
-   si importa descarga/distribución.
+   without following links twice, and Nix closure queries. Save bytes, platform,
+   pins and metric. The remote manifest above is a reference, not a replacement
+   for that local baseline.
+2. **Per-template attribution:** calculate SKY/IHP/GF marginal cost as described
+   above; record the environment and private PDK portions separately.
+3. **First change:** exclude private SKY and its environment; measure. Also exclude
+   general SKY as the second step of the same reduction; measure separately.
+   Verify absence of build dependencies and content, not just public links.
+4. **Second change:** runtime-only ORFS, retaining resources in use.
+5. **Only with evidence:** GB-scale Nix/PDK leftovers; do not remove global
+   LibreLane by default or change IHP/GF compatibility for deduplication.
+6. Validate successive revisions of the same product. A temporary validation
+   tag is not a distributed variant: the result is one image with IHP/GF.
+   Do not overwrite/publish the stable tag before validation. Compare each delta
+   and the combined delta using the same metric; do not add estimates.
+7. Run static checks, updated contract tests and the integration suite for retained
+   capabilities. Explicitly run relevant long flows: not all belong to the regular
+   suite. For SKY-dependent layout tests, create equivalent coverage with a
+   retained PDK or mark the capability removed; do not claim SKY validation in
+   an image without it.
+8. Accept size interventions only when the actual delta is on the order of GB
+   and declared functionality remains intact. Also record compressed size if
+   download/distribution matters.
 
-## Fuera de prioridad
+## Outside the priorities
 
-No dedicar esta tarea a cambiar Ubuntu por Alpine, quitar editores, docs pequeñas,
-bytecode o limpiar builders que nunca se copian al runtime. Los instaladores ya
-limpian varios temporales y caches. La copia de IHP y su `chown` posterior duplican
-unos **0,152 GiB comprimidos** cada uno en la referencia: es un problema de capas,
-pero corregir ese `chown` no alcanza el umbral solicitado. Tampoco considerar que
-`strip` posterior al COPY ahorra lo que hubiera ahorrado hacerlo antes del COPY.
-Estas observaciones no justifican desviar el plan de ORFS, PDKs y entornos LibreLane.
+Do not spend this task replacing Ubuntu with Alpine, removing editors, small docs
+or bytecode, or cleaning builders never copied to the runtime. Installers already
+clean several temporary files and caches. The IHP copy and subsequent `chown`
+each duplicate about **0.152 compressed GiB** in the reference: this is a layering
+problem, but fixing that `chown` does not meet the requested threshold. Nor does
+`strip` after COPY save what it would have saved before COPY.
+These observations do not justify diverting the plan from ORFS, PDKs and LibreLane environments.

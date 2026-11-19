@@ -1,114 +1,114 @@
-# Release 0.3.1 — GF180 y auditoría de aceptación
+# Release 0.3.1 — GF180 and acceptance audit
 
-**Estado: imagen construida; validación incompleta y release no aprobada.**
-Resultado final y evidencia en [release-0.3.1-validation.md](release-0.3.1-validation.md).
-El [plan GF180](gf180-update-0.3.1-plan.md) define el alcance completo.
-Estas notas distinguen objetivos de integración de resultados realmente obtenidos.
+**Status: image built; validation incomplete and release not approved.**
+Final results and evidence in [release-0.3.1-validation.md](release-0.3.1-validation.md).
+The [GF180 plan](gf180-update-0.3.1-plan.md) defines the full scope.
+These notes distinguish integration targets from results actually obtained.
 
-## Revisiones objetivo y límites
+## Target revisions and limits
 
-| Componente | Objetivo inmutable |
+| Component | Immutable target |
 | --- | --- |
-| Template wafer.space GF180 | 1.6.0 — `d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c` |
-| LibreLane privado GF | `99148a9c1e648cdfdb9d7b772481af32e0dfbe8b` |
-| PDK GF global y privado | `792ef67037d74c8c51811eab3ce23cf793491296` |
-| Ciel global | 3.1.0 — `e180507a4190462d65cdded4448eb4f7bd2f30fa` |
-| Precheck GF del plan | 1.7.4 — `9b4e7dab6af073d02b81ecc368069540d2f67db9`; instalación y ejecución requieren evidencia independiente |
+| wafer.space GF180 template | 1.6.0 — `d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c` |
+| Private GF LibreLane | `99148a9c1e648cdfdb9d7b772481af32e0dfbe8b` |
+| Global and private GF PDK | `792ef67037d74c8c51811eab3ce23cf793491296` |
+| Global Ciel | 3.1.0 — `e180507a4190462d65cdded4448eb4f7bd2f30fa` |
+| Planned GF precheck | 1.7.4 — `9b4e7dab6af073d02b81ecc368069540d2f67db9`; installation and execution require independent evidence |
 
-Los nuevos argumentos son `CIEL_VERSION`, `CIEL_REPO_COMMIT` y
-`GF180_PDK_COMMIT`. Los argumentos legacy, incluidos `OPEN_PDKS_*` y
-`PDK_BUILD_JOBS`, se conservan por compatibilidad, pero **no identifican el nuevo
-artefacto GF** ni describen un build Volare. `open_pdks` conserva su nombre como
-alias de stage. `pdk_builder` pasa a depender de `builder`, no de `magic`:
-Ciel descarga y activa el artefacto, sin recompilarlo mediante Volare.
+The new arguments are `CIEL_VERSION`, `CIEL_REPO_COMMIT` and
+`GF180_PDK_COMMIT`. Legacy arguments, including `OPEN_PDKS_*` and
+`PDK_BUILD_JOBS`, are retained for compatibility, but **do not identify the new
+GF artifact** or describe a Volare build. `open_pdks` retains its name as a
+stage alias. `pdk_builder` now depends on `builder`, not `magic`:
+Ciel downloads and activates the artifact without rebuilding it through Volare.
 
-La interfaz pública sigue siendo `/opt/pdks/gf180mcuD`. Debe copiarse la raíz
-Ciel completa con sus destinos de enlaces bajo
-`/opt/pdks/ciel/gf180mcu/versions/`; copiar solo el enlace público no basta.
-No mezclar decks nuevos con macros o modelos del antiguo open_pdks. El inventario
-`tests/run/inventory/tools.json` identifica GF como Ciel y registra su raíz
-resuelta y revisión esperada, separadas del pin legacy. La clave histórica
-`OPEN_PDKS_NAME` se mantiene para consumidores del inventario, con
-`legacy_inventory_key: true`, `manager: ciel` y `revision_key: GF180_PDK_COMMIT`;
-no representa una instalación del antiguo open_pdks.
+The public interface remains `/opt/pdks/gf180mcuD`. Copy the complete
+Ciel root with its link targets under
+`/opt/pdks/ciel/gf180mcu/versions/`; copying only the public link is insufficient.
+Do not mix new decks with macros or models from the old open_pdks. The inventory
+`tests/run/inventory/tools.json` identifies GF as Ciel and records its resolved
+root and expected revision separately from the legacy pin. The historical
+`OPEN_PDKS_NAME` key is retained for inventory consumers, with
+`legacy_inventory_key: true`, `manager: ciel` and `revision_key: GF180_PDK_COMMIT`;
+it does not represent an installation of the old open_pdks.
 
-Los PDKs privados de los templates siguen separados en
-`/opt/librelane-templates/pdks/<key>`. Preservar sus `flake.lock`; no actualizar
-ramas ni resolver descargas durante el uso offline. Una coincidencia del nombre
-del PDK no autoriza intercambiar entornos Nix o raíces privadas/globales.
+The templates' private PDKs remain separate under
+`/opt/librelane-templates/pdks/<key>`. Preserve their `flake.lock`; do not update
+branches or resolve downloads during offline use. Matching PDK names do not
+justify interchanging Nix environments or private/global roots.
 
-La selección conserva `sak-pdk`/`set_pdk`, IHP como predeterminado y la SCL GF
-`gf180mcu_fd_sc_mcu7t5v0`. Las SCL `gf180mcu_as_sc_mcu7t3v3` y
-`gf180mcu_ocd_sc_rt12t3v3` son opciones solo donde estén instaladas y soportadas:
-la primera no está completamente verificada en silicio y la segunda no está
-verificada en silicio. Su presencia no constituye signoff.
+Selection retains `sak-pdk`/`set_pdk`, IHP as the default and the GF SCL
+`gf180mcu_fd_sc_mcu7t5v0`. The `gf180mcu_as_sc_mcu7t3v3` and
+`gf180mcu_ocd_sc_rt12t3v3` SCLs are options only where installed and supported:
+the former is not fully silicon-verified and the latter is not
+silicon-verified. Their presence does not constitute signoff.
 
-## Protección IHP y herramientas compartidas
+## IHP protection and shared tools
 
-Se mantienen sin cambios:
+The following remain unchanged:
 
-- Template IHP `23c62045bb212175c20d8186a7ab308e15fba98c`.
-- LibreLane privado IHP `c5b5099e55f4e3bed507f2e79441ecfd6432d65c`.
-- PDK privado IHP `7bbb4b5a5b64c446fedc64eacadc33fa65ade276`.
-- PDK global IHP `cfc0e22b92306178ebb5a5bc4865afe3294654d0`.
+- IHP template `23c62045bb212175c20d8186a7ab308e15fba98c`.
+- Private IHP LibreLane `c5b5099e55f4e3bed507f2e79441ecfd6432d65c`.
+- Private IHP PDK `7bbb4b5a5b64c446fedc64eacadc33fa65ade276`.
+- Global IHP PDK `cfc0e22b92306178ebb5a5bc4865afe3294654d0`.
 
-Los contratos conservan el baseline histórico y permiten únicamente las tres
-adiciones Ciel/GF y los tres cambios de revisión del template GF. Los demás pins,
-incluido LibreLane global, permanecen protegidos; cualquier cambio compartido
-adicional necesita justificación y una excepción explícita, no regenerar el
-baseline. Congelar pins no demuestra compatibilidad del runtime reconstruido.
+Contracts preserve the historical baseline and allow only the three
+Ciel/GF additions and the three GF template revision changes. Other pins,
+including global LibreLane, remain protected; any additional shared change
+requires justification and an explicit exception, not baseline regeneration.
+Frozen pins do not demonstrate compatibility of the rebuilt runtime.
 
-El fallo histórico IHP de 2701 marcadores Magic DRC está documentado en la
-[investigación IHP](ihp-template-drc-investigation.md). No es un resultado de
-0.3.1, ni una aprobación para omitir reglas o publicar una regresión. Repetir el
-flujo y comparar evidencias; un fallo no se registra como PASS.
+The historical IHP failure with 2701 Magic DRC markers is documented in the
+[IHP investigation](ihp-template-drc-investigation.md). It is not a 0.3.1 result
+or permission to skip rules or publish a regression. Repeat the flow and compare
+evidence; a failure must not be recorded as PASS.
 
-## Gates de aceptación (pendientes hasta aportar evidencia)
+## Acceptance gates (pending until evidence is supplied)
 
-| Gate | Evidencia exigida | Qué no demuestra |
+| Gate | Required evidence | What it does not establish |
 | --- | --- | --- |
-| Contratos host | Salida de unittest, pins GF exactos, IHP congelado, grafo Ciel y ausencia de Volare GF | No ejecutan EDA ni validan artefactos descargados |
-| Sintaxis y Docker | `bash -n`, `git diff --check`, check con argumentos del wrapper | No construyen una imagen |
-| Stage GF | Log persistente de `gf180_pdk`, versión/ruta Ciel y revisión activa | No valida el runtime final ni IHP |
-| Imagen final | ID/digest exacto, inventario, enlaces válidos y recursos analógicos | No equivale a suite completa |
-| Suite habitual offline | `tests/run_all.sh`, resumen sin fallos no excluidos | Excluye flujos largos; exclusiones no son pases |
-| GF global | MOSFET ngspice, PCells KLayout, extracción y smoke LibreLane | No valida el template privado |
-| Templates completos | RTL → implementación → métricas/GDS no vacíos → GL, GF e IHP secuenciales | No sustituye precheck ni signoff |
-| Precheck 1.7.4 | Entorno propio, PDK privado, caso positivo y negativo con salida comprobada | Un fixture negativo no valida fabricación |
-| Reglas nuevas | Fixtures y resultados DCF.1a, DF.11, CO.5a/b, LDMOS y filler | La presencia de decks no prueba correcciones |
-| Regresión IHP | Analógico, KLayout, extracción, template y alternancia IHP → GF → IHP | Pins iguales no prueban ausencia de contaminación |
+| Host contracts | unittest output, exact GF pins, frozen IHP, Ciel graph and no GF Volare | Do not run EDA or validate downloaded artifacts |
+| Syntax and Docker | `bash -n`, `git diff --check`, check with wrapper arguments | Do not build an image |
+| GF stage | Persistent `gf180_pdk` log, Ciel version/path and active revision | Does not validate the final runtime or IHP |
+| Final image | Exact ID/digest, inventory, valid links and analog resources | Is not equivalent to the full suite |
+| Regular offline suite | `tests/run_all.sh`, summary without non-excluded failures | Excludes long flows; exclusions are not passes |
+| Global GF | ngspice MOSFET, KLayout PCells, extraction and LibreLane smoke test | Does not validate the private template |
+| Full templates | RTL → implementation → nonempty metrics/GDS → GL, GF and IHP sequentially | Does not replace precheck or signoff |
+| Precheck 1.7.4 | Own environment, private PDK, positive and negative cases with verified exits | A negative fixture does not validate manufacturing |
+| New rules | Fixtures and results for DCF.1a, DF.11, CO.5a/b, LDMOS and filler | Presence of decks does not prove fixes |
+| IHP regression | Analog, KLayout, extraction, template and IHP → GF → IHP switching | Identical pins do not prove absence of contamination |
 
-Comandos de host desde la raíz del repositorio:
+Host commands from the repository root:
 
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 bash -n build/*.sh images/*/install.sh images/final_structure/{configure,install}/*.sh tests/*.sh tests/*/*.sh
 CHECK_ONLY=1 ./build/build-image.sh
 git diff --check
-# Construcción real: conservar logs; no ejecutarla como si fuera un check estático.
+# Real build: preserve logs; do not treat it as a static check.
 MAX_BUILD_JOBS=2 ./build/build-stage.sh gf180_pdk
 ```
 
-Después de construir la imagen final, montar `tests/` en `/home/designer/tests`
-y ejecutar dentro de **esa imagen**, con diseños separados y salidas en `tests/run/`:
+After building the final image, mount `tests/` at `/home/designer/tests`
+and run inside **that image**, with separate designs and output in `tests/run/`:
 
 ```bash
 bash /home/designer/tests/run_all.sh
 bash /home/designer/tests/test_all_full.sh
 ```
 
-Registrar separadamente ID de baseline y candidato, arquitectura, inventarios,
-comandos, códigos de salida, exclusiones y rutas de logs. Repetir los flujos
-largos secuencialmente en hosts con memoria limitada; no desactivar IR drop,
-filler ni DRC para obtener éxito. Ningún build, prueba de contenedor o precheck
-se declara aprobado por la mera existencia de estas notas.
+Record baseline and candidate IDs, architecture, inventories, commands, exit
+codes, exclusions and log paths separately. Repeat long flows sequentially on
+memory-constrained hosts; do not disable IR drop, filler or DRC to obtain success.
+The mere existence of these notes does not establish that any build, container
+test or precheck passed.
 
-## Publicación y rollback
+## Publication and rollback
 
-No publicar hasta resolver o documentar explícitamente los bloqueos de aceptación
-con resultados de la combinación final. La rama de publicación sería
-`release/0.3.1`, con `release.version` coincidente; crearla o empujarla no forma
-parte de esta preparación. La CI habitual no sustituye los gates largos y de
-precheck anteriores. Conservar la imagen anterior por ID y sus pins; no borrar
-PDKs, diseños ni caches para forzar la migración. Si GF o IHP regresan, detener
-la publicación, corregir o aislar la incompatibilidad y repetir los gates afectados.
+Do not publish until acceptance blockers are resolved or explicitly documented
+with results from the final combination. The publication branch would be
+`release/0.3.1`, with a matching `release.version`; creating or pushing it is
+not part of this preparation. Regular CI does not replace the long-flow and
+precheck gates above. Preserve the previous image by ID and its pins; do not
+delete PDKs, designs or caches to force the migration. If GF or IHP regress,
+stop publication, fix or isolate the incompatibility and repeat affected gates.

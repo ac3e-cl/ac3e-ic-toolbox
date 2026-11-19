@@ -1,220 +1,219 @@
-# Plan de actualización GF180 — dev/0.3.1
+# GF180 update plan — dev/0.3.1
 
-## Objetivo y alcance
+## Objective and scope
 
-Actualizar el template wafer.space a 1.6.0, su PDK y su LibreLane, e incorporar
-GF180 Precheck 1.7.4. Migrar la instalación GF180 de uso general de Volare a
-Ciel 3.1.0 y actualizar su PDK
-sin alterar el PDK, el template ni el entorno LibreLane de IHP.
-Este documento es un plan: no representa una actualización ya implementada.
+Update the wafer.space template to 1.6.0, its PDK and its LibreLane, and add
+GF180 Precheck 1.7.4. Migrate the general-purpose GF180 installation from Volare
+to Ciel 3.1.0 and update its PDK without changing the IHP PDK, template or
+LibreLane environment.
+This document is a plan: it does not represent an already implemented update.
 
-## Revisiones verificadas en upstream
+## Revisions verified upstream
 
-| Componente | Actual | Objetivo |
+| Component | Current | Target |
 | --- | --- | --- |
-| Template GF | `33e4b5ecc9faac82787fa7cb205f08377e27b912` | tag `1.6.0`, commit `d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c` |
-| LibreLane privado GF | `df37e133fc3426c16e8356b1f50a17f8d6082f60` | `99148a9c1e648cdfdb9d7b772481af32e0dfbe8b` |
-| PDK privado GF | `f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7` | `792ef67037d74c8c51811eab3ce23cf793491296` |
-| Precheck GF | Sin integración encontrada en el repositorio | tag `1.7.4`, commit `9b4e7dab6af073d02b81ecc368069540d2f67db9` |
-| Gestor PDK GF | Volare `0.18.1` para GF global | Ciel `3.1.0`, commit `e180507a4190462d65cdded4448eb4f7bd2f30fa` |
+| GF template | `33e4b5ecc9faac82787fa7cb205f08377e27b912` | tag `1.6.0`, commit `d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c` |
+| Private GF LibreLane | `df37e133fc3426c16e8356b1f50a17f8d6082f60` | `99148a9c1e648cdfdb9d7b772481af32e0dfbe8b` |
+| Private GF PDK | `f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7` | `792ef67037d74c8c51811eab3ce23cf793491296` |
+| GF precheck | No integration found in the repository | tag `1.7.4`, commit `9b4e7dab6af073d02b81ecc368069540d2f67db9` |
+| GF PDK manager | Volare `0.18.1` for global GF | Ciel `3.1.0`, commit `e180507a4190462d65cdded4448eb4f7bd2f30fa` |
 
-Fuentes consultadas: refs Git de los repositorios wafer.space, `Makefile` y
-`flake.lock` de ambos commits objetivo. Tanto template como precheck declaran el
-mismo PDK y el mismo commit LibreLane. Preservar sus locks; no resolver sus ramas
-flotantes (`leo/update-pdks` y `dev`) ni regenerar locks.
+Sources consulted: Git refs from the wafer.space repositories, and `Makefile`
+and `flake.lock` at both target commits. Template and precheck declare the same
+PDK and LibreLane commit. Preserve their locks; do not resolve their floating
+branches (`leo/update-pdks` and `dev`) or regenerate locks.
 
 - https://github.com/wafer-space/gf180mcu-project-template/tree/d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c
 - https://github.com/wafer-space/gf180mcu-precheck/tree/9b4e7dab6af073d02b81ecc368069540d2f67db9
 
-### Ciel verificado para wafer.space 1.6.0
+### Ciel verified for wafer.space 1.6.0
 
-El `flake.lock` del template resuelve `librelane.inputs.ciel` al tag `3.1.0`,
-commit `e180507a4190462d65cdded4448eb4f7bd2f30fa`. El `pyproject.toml` de ese
-commit declara `version = "3.1.0"` y Python `>=3.8`. El lock de precheck 1.7.4
-resuelve exactamente el mismo Ciel. Es una comprobación de fuentes y resolución
-Nix, no una ejecución del binario: confirmar `ciel --version` en el entorno
-materializado y registrar su ruta forma parte de los gates de implementación.
+The template's `flake.lock` resolves `librelane.inputs.ciel` to tag `3.1.0`,
+commit `e180507a4190462d65cdded4448eb4f7bd2f30fa`. That commit's `pyproject.toml`
+declares `version = "3.1.0"` and Python `>=3.8`. The precheck 1.7.4 lock resolves
+exactly the same Ciel. This checks sources and Nix resolution, not execution of
+the binary: confirming `ciel --version` in the materialized environment and
+recording its path are implementation gates.
 
-Fuentes adicionales:
+Additional sources:
 - https://github.com/wafer-space/gf180mcu-project-template/blob/d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c/flake.lock
 - https://github.com/fossi-foundation/ciel/blob/e180507a4190462d65cdded4448eb4f7bd2f30fa/pyproject.toml
 
-## Invariantes de protección de IHP
+## IHP protection invariants
 
-No modificar:
+Do not modify:
 
-- `librelaneTemplates.ihp`, incluido su PDK `7bbb4b5a5b64c446fedc64eacadc33fa65ade276`
-  y LibreLane `c5b5099e55f4e3bed507f2e79441ecfd6432d65c`.
-- El pin global `IHP_PDK_REPO_COMMIT`:
+- `librelaneTemplates.ihp`, including its PDK `7bbb4b5a5b64c446fedc64eacadc33fa65ade276`
+  and LibreLane `c5b5099e55f4e3bed507f2e79441ecfd6432d65c`.
+- The global `IHP_PDK_REPO_COMMIT` pin:
   `cfc0e22b92306178ebb5a5bc4865afe3294654d0`.
-- La selección predeterminada y los parches/instaladores de IHP, salvo adaptación
-  mínima de compatibilidad justificada y cubierta por pruebas.
-- `/opt/pdks/ihp-sg13g2` ni los recursos privados del template IHP.
+- IHP's default selection and patches/installers, except for minimal, justified
+  compatibility adaptations covered by tests.
+- `/opt/pdks/ihp-sg13g2` or the IHP template's private resources.
 
-Se permite actualizar LibreLane global y herramientas compartidas cuando una
-necesidad de GF esté demostrada. La protección de IHP pasa de congelar todas las
-herramientas a conservar sus PDKs y validar su funcionamiento con las versiones
-nuevas. La ausencia de restricciones declaradas no demuestra compatibilidad.
+Global LibreLane and shared tools may be updated when a GF requirement is
+established. IHP protection shifts from freezing all tools to preserving its
+PDKs and validating operation with the new versions. Absence of declared
+restrictions does not demonstrate compatibility.
 
-La reconstrucción de capas compartidas no garantiza binarios idénticos cuando
-hay dependencias flotantes. Registrar inventarios y validar IHP en la imagen
-resultante, además de comprobar los pins.
+Rebuilding shared layers does not guarantee identical binaries when dependencies
+float. Record inventories and validate IHP in the resulting image, in addition
+to checking pins.
 
-## Fase 1 — Baseline y migración del PDK global a Ciel
+## Phase 1 — Baseline and global PDK migration to Ciel
 
-1. Capturar inventario de una imagen base identificada por ID: pins, versiones,
-   destinos de enlaces, recursos y resultados de pruebas GF/IHP disponibles.
-2. Confirmar el repositorio/familia y los artefactos Ciel que corresponden al
-   commit `792ef67037d74c8c51811eab3ce23cf793491296`; revisar estructura,
-   manifiestos de bibliotecas, soporte analógico, licencias y compatibilidad con
-   KLayout, Xschem, ngspice y Magic instalados.
-3. Sustituir el build GF Volare/open_pdks por descarga y activación con Ciel
-   3.1.0 durante el build. El pin antiguo open_pdks
-   `0fe599b2afb6708d281543108caf8310912f54af` no se sustituye por el commit del
-   PDK nuevo: registrar pins separados para Ciel y el artefacto GF en el manifiesto.
-4. Usar el comando upstream como referencia, con raíz global explícita:
+1. Capture an inventory of a baseline image identified by ID: pins, versions,
+   link targets, resources and available GF/IHP test results.
+2. Confirm the repository/family and Ciel artifacts corresponding to commit
+   `792ef67037d74c8c51811eab3ce23cf793491296`; review structure, library manifests,
+   analog support, licenses and compatibility with installed KLayout, Xschem,
+   ngspice and Magic.
+3. Replace the GF Volare/open_pdks build with download and activation through
+   Ciel 3.1.0 during the build. Do not replace the old open_pdks pin
+   `0fe599b2afb6708d281543108caf8310912f54af` with the new PDK commit:
+   record separate Ciel and GF artifact pins in the manifest.
+4. Use the upstream command as a reference, with an explicit global root:
    `ciel enable 792ef67037d74c8c51811eab3ce23cf793491296 --pdk-root /opt/pdks --pdk gf180mcuD --include-libraries all`.
-   Verificar disponibilidad de artefactos para la arquitectura objetivo y preservar
-   la raíz Ciel completa y los enlaces necesarios al copiar al runtime. Mantener
-   `/opt/pdks/gf180mcuD` como interfaz pública y las raíces privadas independientes.
-   Si faltan recursos analógicos o falla compatibilidad, registrar el bloqueo y
-   resolverlo antes de aceptar la migración; no ocultarlo con fallback a Volare.
-5. No copiar decks nuevos sobre bibliotecas antiguas sin verificar su matriz de
-   compatibilidad. No aplicar ciegamente el parche actual open_pdks a Ciel.
+   Verify artifact availability for the target architecture and preserve the
+   complete Ciel root and required links when copying to the runtime. Retain
+   `/opt/pdks/gf180mcuD` as the public interface and independent private roots.
+   If analog resources are missing or compatibility fails, record the blocker
+   and resolve it before accepting the migration; do not hide it with a Volare fallback.
+5. Do not copy new decks over old libraries without checking their compatibility
+   matrix. Do not blindly apply the current open_pdks patch to Ciel.
 
-## Fase 1B — Herramientas compartidas y matriz de compatibilidad
+## Phase 1B — Shared tools and compatibility matrix
 
-1. Comparar requisitos de GF nuevo con las versiones globales actuales y con las
-   dependencias fijadas en los locks IHP/GF. Registrar por herramienta: versión
-   actual, objetivo inmutable, motivo, consumidores y pruebas necesarias. Revisar
-   KLayout, Magic, ngspice, Xschem, Netgen, Python y LibreLane según dependencias
-   reales; no asumir que todas necesitan actualización.
-2. Cambiar solo herramientas necesarias, una por vez o por grupo de dependencias
-   inseparables. No elegir automáticamente la última versión ni asumir que el
-   LibreLane del template puede sustituir al global sin revisar su instalación.
-3. Mantener los locks y entornos privados de ambos templates. Una actualización
-   global no debe reemplazar sus ejecutables Nix ni inyectar paquetes Python o
-   bibliotecas mediante variables heredadas. Verificar qué ejecutable y versión
-   resuelve cada contexto, incluyendo herramientas que invoquen rutas absolutas.
-4. Después de cada cambio compartido, construir su stage y ejecutar regresiones
-   rápidas de GF e IHP en un runtime que contenga realmente el cambio. Validar
-   ambos flujos completos con la combinación final antes de aceptar la imagen.
-5. Si aparece regresión IHP, investigar y adaptar mínimamente la integración sin
-   cambiar su PDK. Si no se consigue una versión común compatible, conservar
-   versiones aisladas por entorno; no sacrificar IHP para unificar versiones.
-6. Ampliar los contratos del manifiesto con una lista explícita de cambios
-   compartidos autorizados. Mantener el resto de pins congelados y registrar
-   diferencias de inventario y resultados frente al baseline.
+1. Compare new GF requirements with current global versions and the dependencies
+   pinned in IHP/GF locks. Record each tool's current version, immutable target,
+   rationale, consumers and required tests. Review KLayout, Magic, ngspice,
+   Xschem, Netgen, Python and LibreLane according to actual dependencies;
+   do not assume all need an update.
+2. Change only necessary tools, one at a time or in inseparable dependency
+   groups. Do not automatically choose the latest version or assume template
+   LibreLane can replace the global installation without reviewing its setup.
+3. Preserve both templates' private locks and environments. A global update must
+   not replace their Nix executables or inject Python packages or libraries
+   through inherited variables. Verify the executable and version resolved in
+   each context, including tools that invoke absolute paths.
+4. After each shared change, build its stage and run quick GF and IHP regressions
+   in a runtime that actually contains the change. Validate both full flows with
+   the final combination before accepting the image.
+5. If IHP regresses, investigate and minimally adapt the integration without
+   changing its PDK. If no compatible common version is available, retain
+   isolated versions per environment; do not sacrifice IHP to unify versions.
+6. Extend manifest contracts with an explicit list of authorized shared changes.
+   Keep remaining pins frozen and record inventory differences and results
+   against the baseline.
 
-## Fase 2 — Template y precheck aislados
+## Phase 2 — Isolated template and precheck
 
-1. Actualizar únicamente `librelaneTemplates.gf` en `manifest.json` con los tres
-   commits objetivo. Mantener `gf180mcuD` y los defaults upstream.
-2. Validar el instalador con el nuevo Makefile y lock. Instalar todas las
-   bibliotecas necesarias: upstream ahora usa `--include-libraries all`.
-3. Registrar el pin del precheck explícitamente en el manifiesto e implementar
-   su instalación y launcher GF-only. No existe actualmente una integración que
-   se pueda actualizar simplemente cambiando una versión.
-4. Materializar el entorno Nix del precheck a partir de SU lock; reutilizar un
-   entorno solo si se demuestra la compatibilidad de sus dependencias completas,
-   no solo porque coincide el commit de LibreLane.
-5. Ejecutar precheck con su PDK GF privado, entorno saneado, parámetros explícitos
-   y salida en el proyecto o `tests/run/`. No descargar ni actualizar locks en
-   runtime. Conservar soporte para UID/GID arbitrario de los launchers actuales.
-6. Actualizar LibreLane global solo si un flujo global GF lo requiere y supera
-   las regresiones IHP; template y precheck conservan sus entornos privados.
+1. Update only `librelaneTemplates.gf` in `manifest.json` with the three target
+   commits. Retain `gf180mcuD` and upstream defaults.
+2. Validate the installer against the new Makefile and lock. Install all required
+   libraries: upstream now uses `--include-libraries all`.
+3. Record the precheck pin explicitly in the manifest and implement its
+   installation and GF-only launcher. No current integration can be updated
+   simply by changing a version.
+4. Materialize the precheck's Nix environment from ITS lock; reuse an environment
+   only if compatibility of its complete dependencies is demonstrated, not
+   merely because the LibreLane commit matches.
+5. Run precheck with its private GF PDK, sanitized environment, explicit
+   parameters and output in the project or `tests/run/`. Do not download or
+   update locks at runtime. Preserve arbitrary UID/GID support in current launchers.
+6. Update global LibreLane only if a global GF flow requires it and IHP regressions
+   pass; template and precheck retain their private environments.
 
-## Fase 3 — PDK global GF y bibliotecas
+## Phase 3 — Global GF PDK and libraries
 
-1. Reescribir `images/pdks/install_gf180mcu.sh` para usar Ciel en vez de
-   `volare build`/`volare enable`. Revisar el stage `gf180_pdk`, sus argumentos,
-   dependencias, copias y metadatos. No ejecutar `prepare_open_pdks` ni extraer
-   macros del fd_pr antiguo para completar automáticamente el PDK nuevo.
-   Auditar los recursos del artefacto Ciel y adaptar solo lo necesario.
-2. Instalar Ciel 3.1.0 de forma reproducible en el entorno de build y, si se
-   expone el comando al usuario, en un entorno runtime compatible y controlado.
-   Registrar versión y commit en el manifiesto; verificar `ciel --version` y la
-   ruta efectiva. Auditar dependencias Python antes de modificar paquetes comunes.
-   Los templates mantienen el Ciel de sus propios locks, incluido IHP.
-3. Auditar todos los consumidores de Volare, incluidos
-   `images/base/python_packages.sh`, `images/builder/exhaustive-install.sh`,
-   `images/pdks/prepare_open_pdks.sh`, `gf180_integrity.py`, Dockerfile, inventario
-   y contratos. Retirar dependencias y helpers solo si ya no tienen consumidores;
-   no reemplazar globalmente cadenas `volare` que sigan siendo válidas.
-4. Adaptar el chequeo de integridad a la estructura real `ciel/gf180mcu/versions/`
-   y verificar enlaces sin asumir el backing A de la instalación antigua.
-   Preservar recursos privados necesarios; no exponer variantes extra por accidente.
-5. Mantener `set_pdk gf180mcuD`/`sak-pdk gf180mcuD`, la SCL predeterminada actual y
-   la selección IHP. Las bibliotecas nuevas son opciones, no cambios de default.
-6. Verificar presencia y selección explícita de `gf180mcu_as_sc_mcu7t3v3` y
-   `gf180mcu_ocd_sc_rt12t3v3` en los entornos que las soporten. Documentar que la
-   primera no está completamente verificada en silicio y la segunda no está
-   verificada en silicio; no presentar estas opciones como signoff validado.
-7. Revisar los parches GF actuales: estructura de PCells, activación gdsfactory,
-   efuse, macros, variantes y rutas Xschem. Retirar/adaptar solo lo que corresponda
-   al nuevo upstream; probar idempotencia y comportamiento entre capas Docker.
+1. Rewrite `images/pdks/install_gf180mcu.sh` to use Ciel instead of
+   `volare build`/`volare enable`. Review the `gf180_pdk` stage, its arguments,
+   dependencies, copies and metadata. Do not run `prepare_open_pdks` or extract
+   macros from the old fd_pr to automatically complete the new PDK.
+   Audit the Ciel artifact's resources and adapt only what is necessary.
+2. Install Ciel 3.1.0 reproducibly in the build environment and, if exposed to
+   users, in a controlled, compatible runtime environment. Record version and
+   commit in the manifest; verify `ciel --version` and the effective path.
+   Audit Python dependencies before changing common packages. Templates retain
+   Ciel from their own locks, including IHP.
+3. Audit all Volare consumers, including `images/base/python_packages.sh`,
+   `images/builder/exhaustive-install.sh`, `images/pdks/prepare_open_pdks.sh`,
+   `gf180_integrity.py`, Dockerfile, inventory and contracts. Remove dependencies
+   and helpers only when they have no remaining consumers; do not globally
+   replace `volare` strings that remain valid.
+4. Adapt the integrity check to the actual `ciel/gf180mcu/versions/` structure
+   and verify links without assuming the old installation's A backing.
+   Preserve required private resources; do not accidentally expose extra variants.
+5. Retain `set_pdk gf180mcuD`/`sak-pdk gf180mcuD`, the current default SCL and
+   IHP selection. New libraries are options, not default changes.
+6. Verify presence and explicit selection of `gf180mcu_as_sc_mcu7t3v3` and
+   `gf180mcu_ocd_sc_rt12t3v3` in environments that support them. Document that
+   the former is not fully silicon-verified and the latter is not silicon-verified;
+   do not present these options as validated signoff.
+7. Review current GF patches: PCell structure, gdsfactory activation, efuse,
+   macros, variants and Xschem paths. Remove/adapt only what applies to the new
+   upstream; test idempotence and behavior across Docker layers.
 
-## Fase 4 — Pruebas y gates
+## Phase 4 — Tests and gates
 
-### Contratos de host y comprobaciones estáticas
+### Host contracts and static checks
 
-- Introducir pruebas que fallen con los pins antiguos y pasen con los objetivos;
-  fijar explícitamente las invariantes IHP y el aislamiento de entornos.
-- Adaptar `tests/test_librelane_templates.py` y
-  `tests/test_repository_contract.py`: hoy exigen igualdad de pins GF con el
-  baseline. No actualizar masivamente el baseline ni eliminar protección IHP.
-- Probar argv, código de salida y ausencia de descargas del launcher precheck.
-- Añadir contratos de instalación Ciel: versión exacta, commit GF, raíz explícita,
-  todas las bibliotecas, enlaces válidos y ausencia de invocaciones Volare en el
-  instalador GF. Actualizar inventario: no identificar el nuevo GF como el
-  open_pdks antiguo. Probar funcionamiento offline con PDKs preinstalados.
-- Ejecutar contratos host, `bash -n`, chequeo Docker con argumentos resueltos por
-  los wrappers y `git diff --check`.
+- Introduce tests that fail with the old pins and pass with the targets;
+  explicitly enforce IHP invariants and environment isolation.
+- Adapt `tests/test_librelane_templates.py` and
+  `tests/test_repository_contract.py`: they currently require GF pins to match
+  the baseline. Do not bulk-update the baseline or remove IHP protection.
+- Test argv, exit code and absence of downloads in the precheck launcher.
+- Add Ciel installation contracts: exact version, GF commit, explicit root,
+  all libraries, valid links and no Volare invocations in the GF installer.
+  Update inventory: do not identify new GF as old open_pdks. Test offline
+  operation with preinstalled PDKs.
+- Run host contracts, `bash -n`, Docker check with wrapper-resolved arguments
+  and `git diff --check`.
 
-### Builds y pruebas reales
+### Real builds and tests
 
-1. Construir primero el stage GF afectado y/o overlay de templates, con jobs
-   acotados y logs persistentes. Esto no sustituye la imagen final.
-2. Construir la imagen final y registrar su ID. Montar tests separados de diseños;
-   escribir resultados en `tests/run/`, nunca sobre trabajo del usuario.
-3. GF global: entorno, selección de SCL, enlaces, ngspice MOSFET, KLayout PCells,
-   extracción/layout y smoke LibreLane compatibles con la instalación elegida.
-4. Template GF: RTL, implementación completa, métricas y GDS no vacíos y simulación
-   gate-level. Mantener IR drop y política upstream, sin omisiones para forzar éxito.
-5. Precheck 1.7.4: ejecutar sobre un diseño compatible y añadir caso negativo con
-   salida de error comprobada. Un fixture que deba fallar no valida signoff.
-6. Reglas nuevas: buscar y ejercitar fixtures upstream para DCF.1a, DF.11,
-   CO.5a/b, extracción LDMOS y filler; registrar resultados. La presencia de un
-   archivo o el pin por sí solos no prueban esas correcciones.
-7. IHP: selección, simulación analógica, KLayout, extracción y template completo
-   RTL → GDS → GL; repetir alternancia IHP → GF → IHP en el mismo shell para
-   detectar contaminación de variables/rutas. Usar tests existentes y añadir los
-   que falten tras revisar cobertura real.
-8. Confirmar que los flujos largos excluidos de `make test` se ejecutan
-   explícitamente; no confundir suite habitual con validación completa.
+1. First build the affected GF stage and/or template overlay, with bounded jobs
+   and persistent logs. This does not replace the final image.
+2. Build the final image and record its ID. Mount tests separately from designs;
+   write results in `tests/run/`, never over user work.
+3. Global GF: environment, SCL selection, links, ngspice MOSFET, KLayout PCells,
+   extraction/layout and LibreLane smoke test compatible with the chosen installation.
+4. GF template: RTL, full implementation, nonempty metrics and GDS, and gate-level
+   simulation. Retain IR drop and upstream policy; do not omit checks to force success.
+5. Precheck 1.7.4: run on a compatible design and add a negative case with a
+   verified error exit. A fixture expected to fail does not validate signoff.
+6. New rules: find and exercise upstream fixtures for DCF.1a, DF.11, CO.5a/b,
+   LDMOS extraction and filler; record results. File presence or the pin alone
+   does not prove those fixes.
+7. IHP: selection, analog simulation, KLayout, extraction and full template
+   RTL → GDS → GL; repeat IHP → GF → IHP switching in the same shell to detect
+   variable/path contamination. Use existing tests and add missing tests after
+   reviewing actual coverage.
+8. Confirm long flows excluded from `make test` are run explicitly; do not
+   confuse the regular suite with full validation.
 
-## Criterios de aceptación
+## Acceptance criteria
 
-- Template GF 1.6.0 y precheck 1.7.4 instalados y ejercitados con pins exactos.
-- GF global instalado mediante Ciel 3.1.0 con el commit objetivo, sin build Volare
-  ni mezcla silenciosa de recursos antiguos; comandos habituales funcionan
-  offline y los enlaces son válidos en la imagen final.
-- PDK GF objetivo verificado en los entornos actualizados. Informar por separado
-  el estado global y el privado; cualquier bloqueo global queda pendiente, no
-  declarado como resuelto.
-- Ningún pin del PDK o template IHP cambia. Cada actualización compartida está
-  justificada y fijada; pruebas IHP y GF pasan en la imagen nueva, sin contaminación
-  al alternar PDKs. Los contratos permiten solo los cambios autorizados.
-- Nuevas SCL disponibles donde corresponda, opt-in y con advertencias de silicio.
-- Documentación actualizada de versiones, rutas, comandos y límites de validación.
-- Entrega con IDs de imagen, inventarios, logs y resultados reales, distinguiendo
-  chequeos estáticos, builds parciales, imagen final y signoff de fabricación.
+- GF template 1.6.0 and precheck 1.7.4 installed and exercised with exact pins.
+- Global GF installed through Ciel 3.1.0 at the target commit, without a Volare
+  build or silent mixing of old resources; normal commands work offline and
+  links are valid in the final image.
+- Target GF PDK verified in updated environments. Report global and private
+  status separately; any global blocker remains pending, not declared resolved.
+- No IHP PDK or template pin changes. Every shared update is justified and
+  pinned; IHP and GF tests pass in the new image without contamination when
+  switching PDKs. Contracts allow only authorized changes.
+- New SCLs available where applicable, opt-in and with silicon warnings.
+- Documentation updated for versions, paths, commands and validation limits.
+- Delivery includes image IDs, inventories, logs and real results, distinguishing
+  static checks, partial builds, final image and manufacturing signoff.
 
 ## Rollback
 
-Mantener la imagen anterior por ID y los pins anteriores. No borrar caches ni
-PDKs de la imagen base para recuperar espacio sin aprobación. Si falla GF o IHP,
-no publicar: revertir o aislar la herramienta compartida incompatible, o corregir
-la integración y repetir los gates afectados. Revertir también cambios GF cuando
-corresponda; conservar registro de la combinación de versiones validada.
-No hacer commit, push ni publicación sin solicitud explícita.
+Preserve the previous image by ID and its previous pins. Do not delete caches or
+PDKs from the baseline image to recover space without approval. If GF or IHP
+fails, do not publish: revert or isolate the incompatible shared tool, or fix
+the integration and repeat affected gates. Also revert GF changes where
+appropriate; keep a record of the validated version combination.
+Do not commit, push or publish without an explicit request.
