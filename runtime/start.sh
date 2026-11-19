@@ -173,10 +173,24 @@ if printf '%s\n' "$existing" | python3 -c 'import sys; sys.exit(0 if sys.argv[1]
     if [[ ${fields[2]} != 1 || $mode == test ]]; then
         echo 'Container exists with incompatible configuration or test mode; explicitly remove it to recreate.' >&2; exit 2
     fi
+    # Xwayland regenerates its auth socket on restart (e.g. crash, logout, reboot) and
+    # deletes the old one. A stopped container's bind mount still points at the old path,
+    # so `docker container start` would fail; recreate instead since nothing but the
+    # tmpfs home (always ephemeral) and the bind-mounted shared/tests dirs (preserved
+    # regardless) depend on this container's identity.
+    stale_auth=0
+    auth_source=
+    if [[ ( $mode == x || $mode == attach ) && $running != 1 ]]; then
+        auth_source=$(jq -r '.[0].Mounts[]? | select(.Destination=="/tmp/.Xauthority") | .Source' <<< "$state")
+        [[ -z $auth_source || -f $auth_source ]] || stale_auth=1
+    fi
     replace=0
     refresh=0
     update_reason=
-    if [[ $current_reference != "$reference" ]]; then
+    if (( stale_auth )); then
+        printf 'Recreating %s: its X authority mount (%s) no longer exists; Xwayland likely restarted since the container was created.\n' "$name" "$auth_source" >&2
+        replace=1
+    elif [[ $current_reference != "$reference" ]]; then
         update_reason="from $current_reference to $reference"
     elif [[ -t 0 && -z ${NO_PULL:-} ]]; then
         local_image=$(docker image inspect "$reference" 2>/dev/null || printf '[]')

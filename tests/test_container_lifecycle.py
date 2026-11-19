@@ -13,15 +13,18 @@ ROOT = Path(__file__).resolve().parents[1]
 class ContainerLifecycle(unittest.TestCase):
     def scenario(self, *, image='old:1', running=False, answer=None, local=True,
                  remote='sha256:old', pull_fails=False, no_pull=False, mount=None, stored_mode='x',
-                 local_id='sha256:old-image', mode='x', repo_digests=None):
+                 local_id='sha256:old-image', mode='x', repo_digests=None, xauth_mount=None):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
             base = Path(tmp)
             manifest = json.loads((ROOT / 'manifest.json').read_text())
             reference = f"isaiash/ac3e-ic-toolbox:{manifest['release']['version']}"
             if image == 'current':
                 image = reference
+            mounts = [{'Source': mount or tmp, 'Destination': '/home/designer/shared'}]
+            if xauth_mount is not None:
+                mounts.append({'Source': xauth_mount, 'Destination': '/tmp/.Xauthority'})
             state = [{'Config': {'Image': image, 'Labels': {'org.ac3e.ic-toolbox.mode': stored_mode}}, 'Image': 'sha256:old-image',
-                      'Mounts': [{'Source': mount or tmp, 'Destination': '/home/designer/shared'}],
+                      'Mounts': mounts,
                       'State': {'Running': running}}]
             (base / 'state.json').write_text(json.dumps(state))
             docker = base / 'docker'
@@ -149,6 +152,28 @@ else: sys.exit(8)
         self.assertEqual(code, 0, output)
         self.assertEqual(calls[-1], ['container', 'start', '-ai', 'ac3e-ic-toolbox'])
         self.assertFalse(any(a[:2] == ['image', 'pull'] for a in calls))
+
+    def test_stopped_x_container_with_dead_xauth_mount_recreates_automatically(self):
+        code, output, calls = self.scenario(image='current', mode='x', xauth_mount='/does/not/exist')
+        self.assertEqual(code, 0, output)
+        self.assertIn('Recreating', output)
+        remove = next(i for i, a in enumerate(calls) if a[:2] == ['container', 'rm'])
+        run = next(i for i, a in enumerate(calls) if a[0] == 'run')
+        self.assertLess(remove, run)
+        self.assertFalse(any(a[:2] == ['image', 'pull'] for a in calls))
+
+    def test_stopped_x_container_with_live_xauth_mount_is_reused(self):
+        code, output, calls = self.scenario(image='current', mode='x', answer='n',
+                                             xauth_mount=str(ROOT / 'manifest.json'))
+        self.assertEqual(code, 0, output)
+        self.assertEqual(calls[-1], ['container', 'start', '-ai', 'ac3e-ic-toolbox'])
+
+    def test_running_x_container_with_dead_xauth_mount_is_left_alone(self):
+        code, output, calls = self.scenario(image='current', mode='x', running=True,
+                                             xauth_mount='/does/not/exist')
+        self.assertEqual(code, 0, output)
+        self.assertFalse(any(a[:2] == ['container', 'rm'] for a in calls))
+        self.assertEqual(calls[-1], ['exec', '-it', 'ac3e-ic-toolbox', '/bin/bash'])
 
     def test_running_same_version_opens_another_shell(self):
         code, output, calls = self.scenario(image='current', running=True)
