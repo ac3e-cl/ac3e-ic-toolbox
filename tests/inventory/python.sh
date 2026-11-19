@@ -4,7 +4,7 @@ set -Eeuo pipefail
 TEST_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$TEST_ROOT/common.sh"
 load_design_env
-for executable in python python3 python3.11 uv jupyter; do
+for executable in python python3 python3.11 uv jupyter cocotb-config; do
     require_command "$executable"
 done
 for executable in python python3 python3.11; do
@@ -30,6 +30,11 @@ import jupyterlab
 import klayout.db
 import lzma
 import numpy
+import openpyxl
+import cocotb
+from importlib.metadata import version
+assert tuple(map(int, version('openpyxl').split('.')[:2])) >= (3, 1)
+assert version('cocotb').split('.')[0] == '2'
 import pandas
 import scipy
 import sqlite3

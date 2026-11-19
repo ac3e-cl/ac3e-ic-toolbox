@@ -32,6 +32,6 @@ set_pdk() {
     export KLAYOUT_HOME="${HOME}/.klayout"
     export KLAYOUT_PATH="$KLAYOUT_HOME:$PDKPATH/libs.tech/klayout:${TOOLS:-/opt}/klayout/download"
     if [[ "$selected" == gf180mcuD ]]; then export GF_PDK_OPTION=D; else unset GF_PDK_OPTION; fi
-    printf 'PDK set to %s\n' "$PDK"
+    printf 'PDK set to %s\n' "$PDK" >&2
 }
 sak-pdk() { set_pdk "$@"; }

@@ -10,19 +10,19 @@ For template work, use `librelane-template`, which selects a separately recorded
 Nix development shell and PDK root. Do not combine these templates with the
 global LibreLane executable or the analog PDKs merely because the PDK names match.
 
-## Actualización GF180 de 0.3.1
+## GF180 update in 0.3.1
 
-El objetivo GF es el template wafer.space 1.6.0
-(`d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c`), LibreLane privado
-`99148a9c1e648cdfdb9d7b772481af32e0dfbe8b` y PDK
-`792ef67037d74c8c51811eab3ce23cf793491296`. Su lock fija Ciel 3.1.0.
-No se intercambia este entorno por LibreLane global ni se regenera el lock.
-La migración global a Ciel no cambia las raíces privadas ni los pins IHP.
-Las [notas 0.3.1](release-0.3.1.md) enumeran los gates, las bibliotecas opt-in y
-los límites de validación. La instalación y ejecución del precheck 1.7.4 del
-plan requieren comprobación propia; no se deducen de un template aprobado.
-Los resultados históricos al final de este documento corresponden a imágenes
-anteriores, **no a estos nuevos pins GF**.
+The GF target is the wafer.space 1.6.0 template
+(`d99f6e1ba14e549e80d5d83e113fbd82ed37ed5c`), private LibreLane
+`99148a9c1e648cdfdb9d7b772481af32e0dfbe8b` and PDK
+`792ef67037d74c8c51811eab3ce23cf793491296`. Its lock pins Ciel 3.1.0.
+Do not substitute global LibreLane for this environment or regenerate the lock.
+The global migration to Ciel does not change private roots or IHP pins.
+The [0.3.1 notes](release-0.3.1.md) list the gates, opt-in libraries and
+validation limits. Installing and running the planned precheck 1.7.4 require
+their own verification; a passing template does not establish either.
+The historical results at the end of this document apply to previous images,
+**not to these new GF pins**.
 
 ## Installation policy
 
@@ -84,6 +84,56 @@ IHP follows its upstream full-chip `librelane/config.yaml`, default SG13G2 varia
 and pinned Ciel PDK. GF follows its default `1x1` slot, 5 V SRAM configuration,
 `gf180mcu_fd_sc_mcu7t5v0` SCL and `gf180mcu_fd_io` pads. Optional upstream variants
 are not covered by the default integration tests.
+
+## wafer.space activation paths (stable interface)
+
+The following paths are supported interfaces across releases; changes to the
+pinned contents remain recorded in `/opt/librelane-templates/manifest.json`
+(`librelaneTemplates.gf` and `librelanePrechecks.gf`). They are not aliases for
+the global toolchain:
+
+| Environment | Activation script | Expected `PDK_ROOT` |
+| --- | --- | --- |
+| GF flow | `/opt/librelane-templates/activate/gf.sh` | `/opt/librelane-templates/pdks/gf` |
+| GF precheck | `/opt/librelane-templates/activate/gf-precheck.sh` | `/opt/librelane-templates/pdks/gf-precheck` |
+
+Both select `PDK=gf180mcuD`; their private PDK revision is currently
+`792ef67037d74c8c51811eab3ce23cf793491296`. Do not override these roots with
+`/opt/pdks`: matching names/revisions do not make the environments interchangeable.
+For the wafer.space flow use the **GF environment's LibreLane**, pinned to
+`99148a9c1e648cdfdb9d7b772481af32e0dfbe8b`, not the default
+`/opt/ac3e-ic-toolbox/bin/librelane`. Identical version banners do not identify
+identical revisions or dependencies.
+
+Prefer the existing launcher for a project (it clears inherited Python/PDK
+settings, activates the recorded environment and selects the private PDK):
+
+```bash
+librelane-template run gf /foss/designs/your-project make padring
+librelane-template run gf /foss/designs/your-project make chip
+librelane-template run gf /foss/designs/your-project make sim
+# Omit the command to enter the project's GF shell:
+librelane-template run gf /foss/designs/your-project
+```
+
+Direct sourcing is also supported. Use a clean subshell, not a shell with the
+image initializer still enabled; the recorded scripts already execute `shellHook`:
+
+```bash
+env -i HOME="$HOME" USER="${USER:-designer}" PATH=/usr/bin:/bin \
+  bash --noprofile --norc
+source /opt/librelane-templates/activate/gf.sh
+export PDK_ROOT=/opt/librelane-templates/pdks/gf PDK=gf180mcuD
+# For precheck instead, source activate/gf-precheck.sh and use pdks/gf-precheck.
+```
+
+For precheck, keep `/opt/librelane-templates/src/gf-precheck` as the read-only
+installed source, not a writable working directory. Use the installed
+`gf180-precheck DIRECTORY --input ... --output ... --id ... --slot ...` wrapper
+(`gf180-precheck --help`): it calls that source from your writable project
+`DIRECTORY`, selects the precheck's own environment/PDK and writes runs there.
+A source copy is unnecessary. Do not run `make clone-pdk`, update locks or
+install packages into either recorded Nix environment at runtime.
 
 ## Integration tests
 

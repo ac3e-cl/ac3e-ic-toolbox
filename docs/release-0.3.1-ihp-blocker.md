@@ -1,65 +1,65 @@
-# release 0.3.1: bloqueo IHP full, sin regresión observada por GF180
+# Release 0.3.1: IHP full-flow blocker, no observed GF180 regression
 
-## Resultado
+## Result
 
-**IHP full sigue BLOQUEADO; no existe una corrección completa validada dentro
- del alcance permitido.** No se repitió el flujo completo ni se modificaron
-producción, PDK, pins, locks o criterios de PASS. No se propone omitir checks.
-KLayout DRC 0, LVS PASS y RTL PASS no equivalen a signoff. El runner no ejecutó
-GL tras fallar el flujo; posteriormente se ejecutó de forma independiente sobre
-el netlist de ese checkpoint y pasó 1 testcase, sin skips ni errores
-(`evidence/gl-after-drc-failure.xml`). Ese resultado no cambia el FAIL físico.
+**IHP full remains BLOCKED; no complete validated fix exists within the
+permitted scope.** The full flow was not repeated, and production code, PDK,
+pins, locks and PASS criteria were not modified. No checks are proposed for omission.
+KLayout DRC 0, LVS PASS and RTL PASS do not constitute signoff. The runner did not
+run GL after the flow failed; it was subsequently run independently on that
+checkpoint's netlist and passed 1 testcase, without skips or errors
+(`evidence/gl-after-drc-failure.xml`). That result does not change the physical FAIL.
 
-- Candidata: `sha256:c193ad93a3b2735cb50d37da0497c029765211a9a366fda54a4838e906b7e3ae`.
+- Candidate: `sha256:c193ad93a3b2735cb50d37da0497c029765211a9a366fda54a4838e906b7e3ae`.
 - Baseline: `sha256:ea126a1a4c4a209134aad8bf90a21a4074201f20682c87a677f065f773e3c811`.
-- Nuevo: `tests/run/librelane-template-ihp/run.9sE0hlZI/project/`.
+- New: `tests/run/librelane-template-ihp/run.9sE0hlZI/project/`.
 - Baseline: `tests/run/librelane-template-ihp/run.9FsoK7JP/project/`.
-- Contexto previo: [ihp-template-drc-investigation.md](ihp-template-drc-investigation.md).
+- Previous context: [ihp-template-drc-investigation.md](ihp-template-drc-investigation.md).
 
-## Comparación exacta, no solamente del total
+## Exact comparison, not just totals
 
-Se parsearon ambos `librelane/runs/template/67-magic-drc/reports/drc.magic.rpt`
-con Python `Decimal` y `Counter`, comparando multiconjuntos de
-**(categoría literal, cuatro coordenadas)**, conservando duplicados.
+Both `librelane/runs/template/67-magic-drc/reports/drc.magic.rpt` files were
+parsed with Python `Decimal` and `Counter`, comparing multisets of
+**(literal category, four coordinates)** while retaining duplicates.
 
-| Categoría Magic | Baseline | Candidata | Delta |
+| Magic category | Baseline | Candidate | Delta |
 | --- | ---: | ---: | ---: |
-| TM2.bR, metal ancho/largo | 624 | 624 | 0 |
+| TM2.bR, wide/long metal | 624 | 624 | 0 |
 | Partial overlap/abutment between subcells | 1792 | 1792 | 0 |
 | Cnt.c N-diffusion contact enclosure | 54 | 54 | 0 |
 | Can't overlap those layers | 82 | 82 | 0 |
 | Cnt.c SRAM exception | 149 | 149 | 0 |
 | **Total** | **2701** | **2701** | **0** |
 
-**Cero marcadores añadidos o retirados; coordenadas y multiplicidades iguales.**
-Incluso los informes completos son idénticos byte a byte: SHA-256
+**Zero markers added or removed; identical coordinates and multiplicities.**
+Even the complete reports are byte-for-byte identical: SHA-256
 `575f88b9d49a0d7f9ddf810c9b4000c0047918031d2ba3613d66b8b0398ec371`.
-Las métricas finales de DRC/LVS coinciden; ambos tienen KLayout DRC 0 y
-`design__lvs_error__count = 0`. El nuevo `evidence/flow.log` registra 2701 en
-las líneas 8646, 10172 y 11328; el último es el error diferido final.
-`evidence/rtl.xml` contiene `test_counter` sin fallo.
+Final DRC/LVS metrics match; both have KLayout DRC 0 and
+`design__lvs_error__count = 0`. The new `evidence/flow.log` records 2701 at
+lines 8646, 10172 and 11328; the last is the final deferred error.
+`evidence/rtl.xml` contains `test_counter` without failure.
 
-## Inputs IHP y herramientas efectivas
+## IHP inputs and effective tools
 
-Inventario offline de **ambas imágenes por ID**, no del árbol de trabajo:
+Offline inventory of **both images by ID**, not the working tree:
 
-- Los 80 archivos inventariados (archivos bajo `libs.tech/magic`, dos GDS
-  SRAM/IO y decks `*.drc` bajo `libs.tech/klayout`) tienen hashes iguales.
-- Los cinco inputs contrastados previamente contra upstream —deck Magic DRC,
-  CIF input, `read_sram_gds.tcl`, SRAM GDS e IO GDS— conservan en candidata los
-  mismos hashes instalados y upstream del baseline. Esta investigación reutiliza
-  `upstream-hashes.json`; no vuelve a descargar upstream.
-- Manifiesto IHP idéntico: template `23c62045bb212175c20d8186a7ab308e15fba98c`,
-  PDK aislado `7bbb4b5a5b64c446fedc64eacadc33fa65ade276`, LibreLane
+- All 80 inventoried files (files under `libs.tech/magic`, two SRAM/IO GDS files
+  and `*.drc` decks under `libs.tech/klayout`) have matching hashes.
+- The five inputs previously compared against upstream—Magic DRC deck, CIF input,
+  `read_sram_gds.tcl`, SRAM GDS and IO GDS—retain the same installed and upstream
+  hashes in the candidate as in the baseline. This investigation reuses
+  `upstream-hashes.json`; it does not download upstream again.
+- Identical IHP manifest: template `23c62045bb212175c20d8186a7ab308e15fba98c`,
+  isolated PDK `7bbb4b5a5b64c446fedc64eacadc33fa65ade276`, LibreLane
   `c5b5099e55f4e3bed507f2e79441ecfd6432d65c`.
-- `evidence/flake.lock`, ejecutables registrados, versión LibreLane y
-  `librelane/config.yaml` son idénticos. `67-magic-drc/config.json` solamente
-  difiere en las rutas del identificador de corrida; normalizadas son iguales.
-- Seis herramientas resueltas (Magic, KLayout, LibreLane, OpenROAD, Yosys y
-  Python) tienen las mismas rutas Nix y SHA-256 de sus ejecutables/wrappers.
-  Los archivos `.drv` inventariados de Magic/KLayout también son idénticos.
+- `evidence/flake.lock`, recorded executables, LibreLane version and
+  `librelane/config.yaml` are identical. `67-magic-drc/config.json` differs only
+  in run-identifier paths; after normalization they match.
+- Six resolved tools (Magic, KLayout, LibreLane, OpenROAD, Yosys and Python)
+  have identical Nix paths and executable/wrapper SHA-256 hashes.
+  The inventoried Magic/KLayout `.drv` files are also identical.
 
-Herramientas de signoff de la plantilla, **no** las versiones globales Docker:
+Template signoff tools, **not** global Docker versions:
 
 ```text
 /nix/store/7ar043dk92xygs16rwqivrzv8s467rg0-magic-vlsi-8.3.677/bin/magic
@@ -68,90 +68,90 @@ Herramientas de signoff de la plantilla, **no** las versiones globales Docker:
 /nix/store/6avas7ibvbjp4lwr67djxdqbgv6n86i3-klayout-0.30.12.drv
 ```
 
-SHA-256 del `.drv` Magic activo:
+SHA-256 of the active Magic `.drv`:
 `3efa0d9eeca7b7ad48c4ce41aa96a336aa03076d561333ffe611b471e0e8b1f7`;
-KLayout activo:
+active KLayout:
 `0cbd4c08abb373f8655a4e7beff51a54d185e06ae99b27fd6dd4121f879aca92`.
-Los textos `.drv` conservados identifican sus outputs. `nix-store --query
---deriver` no pudo abrir el lock de base de datos con rootfs read-only;
-se compararon los `.drv` directamente, sin hacer escribible Nix. El primer
-intento además encontró que no existe el alias global de `nix-store`; se
-localizó el binario instalado bajo `/nix/store/*-nix-*/bin/nix-store`.
+Preserved `.drv` text identifies their outputs. `nix-store --query
+--deriver` could not open the database lock with a read-only rootfs;
+the `.drv` files were compared directly without making Nix writable. The first
+attempt also found no global `nix-store` alias; the installed binary was located
+under `/nix/store/*-nix-*/bin/nix-store`.
 
-**Conclusión acotada:** este fallo IHP es la reproducción exacta del bloqueo
-previo, no una regresión observada causada por la actualización GF180.
-Esto no certifica toda la imagen ni todos los inputs IHP no inventariados.
-El PDK relevante es el aislado bajo `/opt/librelane-templates/pdks/ihp`,
-no el PDK global indicado por `IHP_PDK_REPO_COMMIT` en el entorno Docker.
+**Limited conclusion:** this IHP failure exactly reproduces the previous blocker;
+it is not an observed regression caused by the GF180 update.
+This does not certify the whole image or all uninventoried IHP inputs.
+The relevant PDK is isolated under `/opt/librelane-templates/pdks/ihp`,
+not the global PDK identified by `IHP_PDK_REPO_COMMIT` in the Docker environment.
 
-## Miniprobes repetidos en candidata
+## Miniprobes repeated in the candidate
 
-Se reutilizó `targeted_drc.tcl` del baseline, siempre `drc style drc(full)`;
-ningún deck fue editado. Corridas secuenciales, offline, rootfs read-only,
-un CPU, límite duro 384 MiB RAM sin swap, timeout 55 s por probe. El precheck
-GF positivo estaba activo al comenzar y no fue detenido ni modificado.
+The baseline's `targeted_drc.tcl` was reused, always with `drc style drc(full)`;
+no deck was edited. Runs were sequential, offline, with a read-only rootfs,
+one CPU, a hard 384 MiB RAM limit without swap and a 55 s timeout per probe.
+The positive GF precheck was active at the start and was not stopped or modified.
 
-| Probe existente | Resultado Magic | Tiempo con arranque Docker |
+| Existing probe | Magic result | Time including Docker startup |
 | --- | --- | ---: |
-| `pdn-original.gds`, gap 2 µm | 4 TM2.bR | 1.235 s |
-| `pdn-spacing5.gds`, gap 5 µm | 0 | 0.987 s |
-| IO `sg13g2_IOPadOut30mA`, flatglob upstream | 112 abutment + 2 overlap | 34.134 s |
-| Mismo IO, añadiendo `gds flatglob *` | 0 | 3.439 s |
+| `pdn-original.gds`, 2 µm gap | 4 TM2.bR | 1.235 s |
+| `pdn-spacing5.gds`, 5 µm gap | 0 | 0.987 s |
+| IO `sg13g2_IOPadOut30mA`, upstream flatglob | 112 abutment + 2 overlap | 34.134 s |
+| Same IO, adding `gds flatglob *` | 0 | 3.439 s |
 
-Los cuatro informes son idénticos byte a byte a sus miniprobes baseline.
-Exit 0 de Magic no se trató como PASS: se exigió `PROBE_COUNT` y se leyeron
-los informes. Los cero errores solamente corresponden a esos probes.
+All four reports are byte-for-byte identical to their baseline miniprobes.
+Magic exit 0 was not treated as PASS: `PROBE_COUNT` was required and reports
+were read. Zero errors apply only to those probes.
 
-### Corrección mínima defendible y límite de alcance
+### Defensible minimal fix and scope limit
 
-1. **PDN:** el cambio geométrico local probado es aumentar el gap de 2 a 5 µm
-   para los dos polígonos de 6 µm del probe. La regla TM2.bR no cambia. No
-   valida cambiar globalmente `PDN_HSPACING`: faltan conexiones de alimentación
-   de SRAM y cobertura de todos los marcadores del checkpoint.
-2. **Pads:** el import flattening elimina los 114 errores del pad aislado sin
-   tocar su GDS ni reglas. Es una dirección de corrección, no un patch de
-   integración validado: `flatglob *` sobre todo IO no demuestra un flattening
-   selectivo seguro del chip ni equivalencia de extracción/LVS.
-3. **SRAM:** el probe baseline independiente sigue siendo evidencia de 95
-   errores (27 Cnt.c + 68 SRAM exception) con los mismos inputs y herramienta.
-   No se repitió por no necesitar otro trabajo potencialmente pesado. No hay
-   corrección validada de importación/capas derivadas. Los 13 marcadores extra
-   del primer SRAM en chip siguen sin explicación demostrada.
+1. **PDN:** the tested local geometry change increases the gap from 2 to 5 µm
+   for the probe's two 6 µm polygons. The TM2.bR rule is unchanged. This does not
+   validate changing `PDN_HSPACING` globally: SRAM power connections and coverage
+   of all checkpoint markers are missing.
+2. **Pads:** import flattening removes the isolated pad's 114 errors without
+   changing its GDS or rules. This is a direction for a fix, not a validated
+   integration patch: `flatglob *` over all IO does not demonstrate safe selective
+   chip flattening or extraction/LVS equivalence.
+3. **SRAM:** the independent baseline probe remains evidence of 95 errors
+   (27 Cnt.c + 68 SRAM exception) with the same inputs and tool. It was not
+   repeated because another potentially heavy job was unnecessary. There is no
+   validated import/derived-layer fix. The first in-chip SRAM's 13 extra markers
+   still lack a demonstrated explanation.
 
-Por tanto **no hay un cambio mínimo completo autorizado y validado que haga
-IHP full PASS**. Resolverlo requiere trabajo específico de integración de
-PDN/importación/SRAM y validación física posterior, fuera de esta investigación
-read-only. No es defendible convertir LVS/KLayout/RTL positivos en PASS del
-flujo ni relajar reglas, cambiar pins o excluir Magic.
+Therefore **no complete, authorized and validated minimal change makes
+IHP full PASS**. Resolution requires specific PDN/import/SRAM integration work
+and subsequent physical validation, outside this read-only investigation.
+It is not defensible to turn positive LVS/KLayout/RTL results into a flow PASS,
+relax rules, change pins or exclude Magic.
 
-## Evidencia y reproducción exacta
+## Evidence and exact reproduction
 
-Nueva evidencia ignorada bajo el `evidence/` de la corrida nueva:
+New ignored evidence under the new run's `evidence/`:
 
-- `compare_release_031.py`, `release-031-comparison.json`: categorías literales,
-  comparación completa de marcadores, hashes y métricas.
+- `compare_release_031.py`, `release-031-comparison.json`: literal categories,
+  complete marker comparison, hashes and metrics.
 - `inventory_ihp.py`, `{baseline,candidate}-inventory.json`,
-  `release-031-inventory-comparison.json`: SHA-256, textos `.drv`, rutas
-  resueltas y comparación con las cinco URLs upstream exactas del baseline.
-- `run_miniprobes.py`, `release-031-miniprobes.json`: comandos Docker completos,
-  flags, variables, tiempos, códigos de salida, conteos y hashes de informes.
+  `release-031-inventory-comparison.json`: SHA-256, `.drv` text, resolved paths
+  and comparison with the baseline's five exact upstream URLs.
+- `run_miniprobes.py`, `release-031-miniprobes.json`: complete Docker commands,
+  flags, variables, timings, exit codes, counts and report hashes.
 - `release-031-{pdn-original,pdn-spacing5,pad-native,pad-flat}.{log,rpt}`.
 
-Desde la raíz del repositorio:
+From the repository root:
 
 ```bash
 E=tests/run/librelane-template-ihp/run.9sE0hlZI/project/evidence
 python3 "$E/compare_release_031.py"
-# Inventario: ambos IDs anteriores, misma invocación, montaje de evidencia RO:
+# Inventory: both IDs above, same invocation, read-only evidence mount:
 docker run --rm --network none --memory 256m --cpus 1 --read-only \
   -v "$PWD/$E:/evidence:ro" --entrypoint /usr/bin/python3 IMAGE_ID \
   /evidence/inventory_ihp.py
-# Solo los cuatro probes acotados descritos, nunca el flujo completo:
+# Only the four bounded probes described above, never the full flow:
 python3 "$E/run_miniprobes.py"
 ```
 
-Fuentes: informes/config/métricas/XML de ambas corridas; bytes de ambas imágenes
-inmutables; baseline `upstream-hashes.json`, `nix-magic-derivations.json`,
-`targeted-results.json`, `sram-native.rpt`; informe de investigación previo.
-No commits. Único documento nuevo: este; el resto de escrituras son evidencia
-ignorada. Los cambios concurrentes del repositorio no fueron alterados.
+Sources: reports/config/metrics/XML from both runs; bytes from both immutable
+images; baseline `upstream-hashes.json`, `nix-magic-derivations.json`,
+`targeted-results.json`, `sram-native.rpt`; previous investigation report.
+No commits. Only new document: this one; all other writes are ignored evidence.
+Concurrent repository changes were not altered.

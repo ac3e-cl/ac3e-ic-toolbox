@@ -67,16 +67,23 @@ See the [connection and troubleshooting guide](docs/mcp-integration.md) and
 [Hermes](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp),
 [OpenCode](https://opencode.ai/docs/cli/#mcp).
 
-## Preparación de release 0.3.1
+## Release 0.3.2
 
-Las [notas y gates de 0.3.1](docs/release-0.3.1.md) describen la migración GF180
-al template wafer.space 1.6.0, PDK `792ef67037d74c8c51811eab3ce23cf793491296`
-y Ciel 3.1.0, preservando los pins y entornos privados IHP. El alias de stage
-`open_pdks` y los argumentos legacy se conservan; no identifican el nuevo PDK GF.
-Estas notas son preparación, **no una afirmación de imagen publicada, builds,
-precheck ni flujos completos aprobados**. Los resultados de imágenes anteriores
-no validan esta combinación. Consultar el [plan](docs/gf180-update-0.3.1-plan.md)
-para el alcance completo y los gates aún pendientes.
+See the [0.3.2 changelog and validation limits](docs/release-0.3.2.md) for the
+Python/shell compatibility fixes and restored Windows VcXsrv defaults. The
+release branch triggers image build, tests and publication; branch availability
+alone does not mean that the image has been published.
+
+## Release 0.3.1 preparation
+
+The [0.3.1 notes and gates](docs/release-0.3.1.md) describe the GF180 migration
+to the wafer.space 1.6.0 template, PDK `792ef67037d74c8c51811eab3ce23cf793491296`
+and Ciel 3.1.0, preserving the IHP pins and private environments. The `open_pdks`
+stage alias and legacy arguments are retained; they do not identify the new GF PDK.
+These notes are preparation, **not a claim that the image has been published or
+that builds, precheck or full flows have passed**. Results from previous images
+do not validate this combination. See the [plan](docs/gf180-update-0.3.1-plan.md)
+for the full scope and outstanding gates.
 
 ## About
 
@@ -115,7 +122,7 @@ We welcome contributions from the global IC design community!
 ## Supported Operating Systems
 
 - **Linux** (recommended)
-- **Windows** (via WSL 2)
+- **Windows** (Git Bash or WSL 2, with Docker Desktop)
 - **macOS** (experimental, community support encouraged)
 
 ---
@@ -250,7 +257,27 @@ shell behavior. Existing containers must be recreated to use the updated image.
    make start
    ```
 
-### Windows (with WSL 2)
+### Windows (Git Bash or WSL 2)
+
+Install Docker Desktop with Linux-container support, Git Bash (or WSL 2), GNU
+Make, `jq`, and Python 3. Start Docker Desktop before launching the toolbox.
+From Git Bash, run `make start` in the cloned repository; `start.bat` is another
+entry point. Windows starts the installed VcXsrv automatically by default when
+WSLg is not active. You do not need to start VcXsrv manually or set MSYS path
+conversion variables: the launcher handles Docker argument conversion itself.
+In Git Bash/MSYS, automatic startup uses `host.docker.internal:0` even if the
+terminal inherited another `DISPLAY`. To use an existing external X server and
+preserve your `DISPLAY`, select `AC3E_XSERVER=native` explicitly. An existing
+VcXsrv process with different settings is never stopped automatically; close it
+explicitly before using managed startup.
+Existing native Linux and WSLg display configuration is preserved.
+
+If an earlier failed start left a container in Docker's `created` state with
+invalid Windows paths, rerun the launcher. It explains the problem and asks for
+consent before replacing that container (default: **No**). Preserve any needed
+files in its writable layer before accepting; mounted designs remain on the host.
+
+For the WSL 2 route:
 
 1. **Install [WSL 2](https://docs.microsoft.com/en-us/windows/wsl/install) and Ubuntu from the Microsoft Store.**
 
@@ -297,9 +324,24 @@ shell behavior. Existing containers must be recreated to use the updated image.
    
    **Note:** We recommend version 21.1.10 as newer versions may have security concerns.
 
+   **Default Windows startup:** when WSLg is not active, `start.bat` starts VcXsrv with
+   `-multiwindow` and enables `LIBGL_ALWAYS_INDIRECT=1` in the container.
+   Xauthority is generated and shared automatically; access control stays enabled.
+   WSL `make start` uses the same defaults when WSLg is not active. Allow VcXsrv
+   through Windows Firewall only for the Docker/WSL network. If an existing
+   VcXsrv instance uses different settings, close it explicitly and retry.
+   See [Windows defaults and overrides](docs/docker-desktop-terminal.md#vcxsrv-window-mode-and-rendering).
+
 6. **Note:** Some tools may require additional configuration or may not be fully supported.
 
 ### macOS (experimental)
+
+Install Docker Desktop (Linux containers), Git, GNU Make, `jq`, Python 3 and a
+modern Bash **4.2 or newer**. The system-provided Bash 3.2 is insufficient for
+the launchers (`mapfile`, lowercase expansion and `[[ -v ]]` are required).
+For example, install Bash through Homebrew and put its `bin` directory ahead
+of `/bin` on `PATH`, so both `bash` and Make's launcher calls select it.
+Start Docker Desktop before continuing.
 
 1. **Install [XQuartz](https://www.xquartz.org/) for GUI tools:**
    
@@ -311,12 +353,23 @@ shell behavior. Existing containers must be recreated to use the updated image.
    cd ac3e-ic-toolbox
    ```
 
-3. **Run the Docker environment:**
-   ```bash
-   make start
-   ```
+3. **Configure the external XQuartz connection and run the Docker environment:**
 
-4. **Note:** macOS support is experimental. Community support and contributions are encouraged.
+   Enable XQuartz's **Allow connections from network clients**, restart it, and
+   configure Xauthority and firewall access for the Docker network. Supply a
+   TCP `DISPLAY` reachable from the container, not the macOS launchd socket.
+   For XQuartz display 0:
+   ```bash
+   AC3E_XSERVER=native DISPLAY=host.docker.internal:0 make start
+   ```
+   Provide a readable `XAUTHORITY` file containing authorization for that TCP
+   display. See [host-specific X11 setup](docs/docker-desktop-terminal.md#host-specific-x11-connection).
+   `AC3E_XSERVER=native` uses your configured XQuartz server; it does not try to
+   start VcXsrv. Do not disable X11 access control globally. For a shell without
+   GUI support, use `make start-raw` instead.
+
+4. **Note:** macOS support is experimental; these instructions are not a claim
+   of validation on a real macOS host. Community testing and contributions are encouraged.
 
 ---
 
@@ -349,6 +402,33 @@ system Python, with `/opt/eda-venv/bin` selected by default on `PATH`.
 `/usr/bin/python3` remains Ubuntu 22.04's Python 3.10; it is not replaced.
 The global and template-specific Nix environments keep their own interpreters
 and dependencies rather than sharing the EDA venv.
+The default EDA venv includes `openpyxl>=3.1` and `cocotb>=2.0,<3`
+(`cocotb-config --version`). It is image-managed and read-only for regular users.
+
+#### Add project Python packages without root
+
+Create an independent venv in your writable, persistent project directory:
+
+```bash
+cd /foss/designs/your-project
+python3 -m venv .venv
+export EDA_VENV="$PWD/.venv"
+source "$EDA_VENV/bin/activate"
+python -m pip install "openpyxl>=3.1" "gdstk>=1.0" "cocotb>=2.0,<3"
+```
+
+Set `EDA_VENV` before activation so child Bash shells keep selecting this Python
+rather than restoring `/opt/eda-venv` through `BASH_ENV`. Repeat the `export` and
+`source` commands in a new session. This venv does **not** inherit the image's
+Python packages: install the dependencies your project needs. Exit the shell to
+return to the default environment. Recreate the venv after an image/Python upgrade;
+keep requirements in your project instead of copying the venv to another host.
+Do not use this procedure inside the isolated wafer.space environments.
+
+The global `gdstk` remains below 1.0: `glayout==0.0.9` requires
+`gdsfactory==7.7.0`, which requires `gdstk<1`. Installing gdstk 1.x there would
+break dependency consistency. Use the independent project venv above for 1.x;
+upgrading the analog layout stack is deliberately outside this compatibility fix.
 
 The pinned Ubuntu KLayout `.deb` embeds Python **3.10**, regardless of `PATH`.
 Its GF180 PCells have a separate `/opt/klayout-pcells` venv containing `numpy<2`,

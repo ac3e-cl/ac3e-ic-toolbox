@@ -47,6 +47,67 @@ displays). Limit access to the required Docker/WSL network. Do **not** disable
 access control globally with `xhost +`, expose X11 to the Internet, or disable
 the firewall. X11 access grants substantial control over the graphical session.
 
+### VcXsrv window mode and rendering
+
+When WSLg is not active, the default Windows `start.bat` path starts VcXsrv with
+`-multiwindow -clipboard -primary -wgl -listen tcp`, display 0, and passes
+`LIBGL_ALWAYS_INDIRECT=1` to new containers. WSL `make start` selects the same
+route when `WSL_INTEROP` is set and `WAYLAND_DISPLAY` is absent. WSLg and native
+Linux keep their existing display/rendering behavior. TCP displays no longer
+mount the unrelated Linux X11 socket directory.
+
+The launcher creates a private MIT-MAGIC-COOKIE-1 authority file under
+`~/.cache/ac3e-ic-toolbox/vcxsrv.xauth`, passes its Windows path to VcXsrv using
+`-auth`, and mounts it read-only into the container. It reuses the cookie on
+subsequent starts. An explicitly supplied `XAUTHORITY` file is used instead;
+it must already contain a cookie valid for the TCP display. Access control is
+**not** disabled. VcXsrv must be installed on Windows and WSL interop must expose
+`powershell.exe` and `wslpath`. The trusted repository script uses a process-scoped
+PowerShell execution-policy override; machine policy is not changed.
+Configure Windows Firewall access only for the
+required Docker/WSL network; the launcher does not modify firewall rules.
+
+An existing VcXsrv instance is reused only if it already uses display 0,
+`-multiwindow`, and the same `-auth` file, without `-ac`. Otherwise the launcher stops with
+an explanation: close that server explicitly and retry. It never kills another
+session's X server. `DRY_RUN=1` does not start Windows processes or create cookies.
+
+Overrides in WSL or local `.env`:
+
+```bash
+# Use WSLg or an externally configured X server (no automatic VcXsrv startup):
+AC3E_XSERVER=native make start
+# Keep the automatic VcXsrv route but disable indirect GL:
+LIBGL_ALWAYS_INDIRECT=0 make start
+# Explicitly select VcXsrv, even if WSLg is installed:
+AC3E_XSERVER=vcxsrv make start
+```
+
+`AC3E_XSERVER` accepts `auto` (the WSL launcher default), `native`, or `vcxsrv`.
+`start.bat` uses the same `auto` selection and honors local `.env` settings; an
+explicit Windows `AC3E_XSERVER` environment variable takes precedence. VcXsrv uses
+`DISPLAY=host.docker.internal:0` unless a TCP display is already supplied;
+local Unix display values are replaced on this route. Automatic startup supports
+display 0 only. Use the native route for other externally configured displays.
+
+Existing containers retain their original environment. Recreate them explicitly
+(or accept the launcher's version-update prompt) to adopt the release defaults,
+preserving mounted designs and any needed writable-layer files first.
+
+These settings restore the historical Windows defaults, but do not establish
+that they fix every popup or performance issue. [Mesa documents](https://docs.mesa3d.org/envvars.html#libgl-environment-variables)
+indirect GL as a rendering mode, not a general acceleration switch. To compare
+KLayout on an affected workstation, close each instance and use the same layout:
+
+```bash
+env -u LIBGL_ALWAYS_INDIRECT klayout /foss/designs/your-project/chip.gds
+LIBGL_ALWAYS_INDIRECT=1 klayout /foss/designs/your-project/chip.gds
+```
+
+Compare pan/zoom, startup and dialog visibility separately. Visual behavior
+still requires validation on Windows; Linux command-boundary tests do not
+establish window stacking or GUI performance.
+
 ### Example: native Linux Engine
 
 Run from the graphical host session after setting `IMAGE` to the updated image

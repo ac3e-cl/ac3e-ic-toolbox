@@ -20,11 +20,9 @@ class ContainerLifecycle(unittest.TestCase):
             reference = f"isaiash/ac3e-ic-toolbox:{manifest['release']['version']}"
             if image == 'current':
                 image = reference
-            mounts = [{'Source': mount or tmp, 'Destination': '/home/designer/shared'}]
-            if xauth_mount is not None:
-                mounts.append({'Source': xauth_mount, 'Destination': '/tmp/.Xauthority'})
-            state = [{'Config': {'Image': image, 'Labels': {'org.ac3e.ic-toolbox.mode': stored_mode}}, 'Image': 'sha256:old-image',
-                      'Mounts': mounts,
+            state = [{'Config': {'Image': image, 'Env': ['DISPLAY=:0'] if stored_mode == 'x' else [],
+                                 'Labels': {'org.ac3e.ic-toolbox.mode': stored_mode}}, 'Image': 'sha256:old-image',
+                      'Mounts': [{'Source': mount or tmp, 'Destination': '/home/designer/shared'}],
                       'State': {'Running': running}}]
             (base / 'state.json').write_text(json.dumps(state))
             docker = base / 'docker'

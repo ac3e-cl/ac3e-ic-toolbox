@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "release": {
-    "version": "0.3.1"
+    "version": "0.3.2"
   },
   "image": {
     "registry": "docker.io",
@@ -69,7 +69,7 @@
       "IHP_PDK_REPO_COMMIT": "cfc0e22b92306178ebb5a5bc4865afe3294654d0",
       "IHP_PDK_REPO_BRANCH": "dev",
       "IHP_PDK_NAME": "ihp-sg13g2",
-      "OPENVAF_REPO_URL": "https://github.com/iic-jku/OpenVAF.git",
+      "OPENVAF_REPO_URL": "https://github.com/pascalkuthe/OpenVAF.git",
       "OPENVAF_REPO_COMMIT": "a9697ae7780518f021f9f64e819b3a57033bd39f",
       "OPENVAF_DOWNLOAD": "https://openva.fra1.cdn.digitaloceanspaces.com/openvaf_23_5_0_linux_amd64.tar.gz",
       "OPENVAF_NAME": "openvaf",

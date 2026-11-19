@@ -15,6 +15,8 @@ uv pip install --python "$EDA_VENV/bin/python" --strict \
     glayout \
     cace \
     pandas \
+    "openpyxl>=3.1" \
+    "cocotb>=2.0,<3" \
     ojson \
     networkx \
     pytest \

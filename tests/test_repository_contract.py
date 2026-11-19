@@ -40,7 +40,8 @@ class RepositoryContract(unittest.TestCase):
         self.assertTrue(PDK_JOB_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
         self.assertTrue(GF_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
         expected_arguments = {**before['build']['arguments'], **PYTHON_ARGUMENTS,
-                              **PDK_JOB_ARGUMENTS, **GF_ARGUMENTS}
+                              **PDK_JOB_ARGUMENTS, **GF_ARGUMENTS,
+                              'OPENVAF_REPO_URL': 'https://github.com/pascalkuthe/OpenVAF.git'}
         self.assertEqual(expected_arguments, after['build']['arguments'])
         self.assertEqual(after['librelaneTemplates'], {
             'ihp': before['librelaneTemplates']['ihp'],
@@ -50,6 +51,8 @@ class RepositoryContract(unittest.TestCase):
         self.assertEqual(before['image']['registry'], after['image']['registry'])
         self.assertEqual(after['image']['namespace'], 'isaiash')
         self.assertEqual(after['image']['name'], 'ac3e-ic-toolbox')
+        self.assertEqual(after['build']['arguments']['OPENVAF_REPO_URL'],
+                         'https://github.com/pascalkuthe/OpenVAF.git')
 
     def test_ihp_pdk_and_template_remain_frozen(self):
         manifest = json.loads((ROOT / 'manifest.json').read_text())
