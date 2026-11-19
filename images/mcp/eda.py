@@ -11,6 +11,8 @@ from typing import Callable
 # Examples are literal argv, not shell commands or synthetic tool wrappers.
 _CATALOG = (
     ('gnucap', 'GNU Circuit Analysis Package', ('analog simulation', 'batch command files'), ['gnucap', '-b', '/foss/designs/design.ckt']),
+    ('modelgen-verilog', 'Verilog-A model generator for Gnucap', ('model parsing', 'C++ model generation'), ['modelgen-verilog', '--dump', '/foss/designs/model.va']),
+    ('gnuplot', 'Headless plotting and file export', ('batch plotting', 'plot scripts'), ['gnuplot', '/foss/designs/plot.gp']),
     ('ngspice', 'SPICE circuit simulator', ('analog simulation', 'OSDI models'), ['ngspice', '-b', '/foss/designs/design.cir']),
     ('Xyce', 'Parallel circuit simulator', ('analog simulation',), ['Xyce', '/foss/designs/design.cir', '-o', 'simulation']),
     ('magic', 'VLSI layout editor and Tcl engine', ('layout', 'DRC', 'extraction'), ['magic', '-dnull', '-noconsole', '/foss/designs/layout.tcl']),

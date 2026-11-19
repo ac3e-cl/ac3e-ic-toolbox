@@ -5,7 +5,35 @@
 [![Issues](https://img.shields.io/github/issues/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=Issues&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=PRs&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/pulls)
 [![Contributors](https://img.shields.io/github/contributors/ac3e-cl/ac3e-ic-toolbox?style=flat-square&label=Contributors&logo=github)](https://github.com/ac3e-cl/ac3e-ic-toolbox/graphs/contributors)
-[![Docker Pulls](https://img.shields.io/docker/pulls/isaiash/ac3e-ic-toolbox?style=flat-square&label=Pulls&logo=docker)](https://hub.docker.com/r/isaiash/ac3e-ic-toolbox)
+[![Docker Pulls](https://img.shields.io/docker/pulls/isaiash/ac3e-ic-toolbox?style=flat-square&logo=docker)](https://hub.docker.com/r/isaiash/ac3e-ic-toolbox)
+
+## Installed Tools / PDKs
+
+| Tool         | Description                                         | Source |
+|--------------|-----------------------------------------------------|--------|
+| **librelane** | Complete RTL-to-GDSII ASIC implementation flow     | Nix    |
+| openroad     | Physical design platform; standalone and LibreLane environments | System / Nix |
+| ngspice      | SPICE analog and mixed-signal simulator             | System |
+| gnucap       | GNU Circuit Analysis Package (20260729-dev)         | System |
+| modelgen-verilog | Verilog-A model generator for Gnucap (20260729-dev) | System |
+| gnuplot      | Command-line plotting and file export (headless)    | System |
+| xschem       | Schematic Editor                                    | System |
+| magic        | Layout editor with DRC/Extraction capabilities      | System |
+| klayout      | Layout viewer and editor for GDS                    | System; LibreLane uses its Nix environment |
+| netgen       | Netlist Comparison                                  | System |
+| yosys        | RTL synthesis framework                             | System |
+| verilator    | Verilog simulator                                   | System |
+| iverilog     | Icarus Verilog simulator                            | System |
+| cvc          | Circuit validity checker                            | System |
+| cace         | Circuit Characterization engine                     | System |
+| gdsfactory   | Python module for GDS generation                    | System |
+| glayout      | Python module for PDK-agnostic layout automation    | System |
+| pygmid       | Python module for systematic circuit sizing         | System |
+| openvaf      | Verilog-A to OSDI compiler                          | System |
+
+Bundled PDKs: IHP SG13G2 (pinned from upstream `main`) and GF180MCU D.
+See [`manifest.json`](manifest.json) for source revisions.
+
 ## Quickstart: use the published image (no local build)
 
 From a Linux desktop terminal (or WSL 2 with an X server configured), install
@@ -66,24 +94,6 @@ See the [connection and troubleshooting guide](docs/mcp-integration.md) and
 [Cursor](https://cursor.com/docs/context/mcp),
 [Hermes](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp),
 [OpenCode](https://opencode.ai/docs/cli/#mcp).
-
-## Release 0.3.2
-
-See the [0.3.2 changelog and validation limits](docs/release-0.3.2.md) for the
-Python/shell compatibility fixes and restored Windows VcXsrv defaults. The
-release branch triggers image build, tests and publication; branch availability
-alone does not mean that the image has been published.
-
-## Release 0.3.1 preparation
-
-The [0.3.1 notes and gates](docs/release-0.3.1.md) describe the GF180 migration
-to the wafer.space 1.6.0 template, PDK `792ef67037d74c8c51811eab3ce23cf793491296`
-and Ciel 3.1.0, preserving the IHP pins and private environments. The `open_pdks`
-stage alias and legacy arguments are retained; they do not identify the new GF PDK.
-These notes are preparation, **not a claim that the image has been published or
-that builds, precheck or full flows have passed**. Results from previous images
-do not validate this combination. See the [plan](docs/gf180-update-0.3.1-plan.md)
-for the full scope and outstanding gates.
 
 ## About
 
@@ -373,27 +383,7 @@ Start Docker Desktop before continuing.
 
 ---
 
-## Installed Tools / PDKs
-
-| Tool         | Description                                         | Source |
-|--------------|-----------------------------------------------------|--------|
-| **librelane** | Complete RTL-to-GDSII ASIC implementation flow     | Nix    |
-| openroad     | Physical design platform; standalone and LibreLane environments | System / Nix |
-| ngspice      | SPICE analog and mixed-signal simulator             | System |
-| gnucap       | GNU Circuit Analysis Package (20260729-dev)         | System |
-| xschem       | Schematic Editor                                    | System |
-| magic        | Layout editor with DRC/Extraction capabilities      | System |
-| klayout      | Layout viewer and editor for GDS                    | System; LibreLane uses its Nix environment |
-| netgen       | Netlist Comparison                                  | System |
-| yosys        | RTL synthesis framework                             | System |
-| verilator    | Verilog simulator                                   | System |
-| iverilog     | Icarus Verilog simulator                            | System |
-| cvc          | Circuit validity checker                            | System |
-| cace         | Circuit Characterization engine                     | System |
-| gdsfactory   | Python module for GDS generation                    | System |
-| glayout      | Python module for PDK-agnostic layout automation    | System |
-| pygmid       | Python module for systematic circuit sizing         | System |
-| openvaf      | Verilog-A to OSDI compiler                          | System |
+## Tool and PDK Configuration
 
 ### Python environments
 
@@ -484,14 +474,6 @@ Selection updates `PDK`, `PDKPATH`, `STD_CELL_LIBRARY`,
 Unsupported PDKs (including GF C) fail without changing the previous selection.
 An optional second argument must name an installed standard-cell library.
 
-GNUCAP is built from the official Codeberg repository using its `INSTALL`
-instructions, with the `20260729-dev` snapshot pinned by SHA in `manifest.json`.
-Build it independently with `./build/build-stage.sh gnucap`. Inside the image,
-run `bash /home/designer/shared/tests/gnucap.sh` to verify a 10 V resistor divider
-produces 5 V. This standalone test lives in the shared workspace as requested;
-it is not discovered by `tests/run_all.sh`. No additional GNUCAP extensions or
-PDK model compatibility are implied by this smoke test.
-
 The IHP PDK Verilog-A models are compiled into OSDI binaries during the image build (`ihp_pdk` stage). The canonical location is `libs.tech/ngspice/osdi/`; a compatibility symlink at `libs.tech/ngspice/openvaf/` points to the same files for older schematics that reference the legacy path.
 
 Versions, commit references, and source URLs for all tools and PDKs are specified
@@ -543,6 +525,8 @@ CHECK_ONLY=1 ./build/build-image.sh
 ---
 
 ## Publishing a Release
+
+See the [changelog](CHANGELOG.md) for release history.
 
 The release workflow builds and publishes an image whenever a branch named
 `release/x.y.z` is pushed. The branch version must exactly match

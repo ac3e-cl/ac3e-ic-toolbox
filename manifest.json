@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "release": {
-    "version": "0.3.2"
+    "version": "0.4.0"
   },
   "image": {
     "registry": "docker.io",
@@ -54,6 +54,8 @@
       "GNUCAP_REPO_URL": "https://codeberg.org/gnucap/gnucap.git",
       "GNUCAP_REPO_COMMIT": "bcaff61b3c562179476bb6c5de783676994c61e1",
       "GNUCAP_NAME": "gnucap",
+      "GNUCAP_MODELGEN_REPO_URL": "https://codeberg.org/gnucap/gnucap-modelgen-verilog.git",
+      "GNUCAP_MODELGEN_REPO_COMMIT": "0c7f045dd88a8a143631a0d2c87a0db2849762c8",
       "XYCE_REPO_URL": "https://github.com/Xyce/Xyce.git",
       "XYCE_REPO_COMMIT": "Release-7.8.0",
       "XYCE_TRILINOS_REPO_URL": "https://github.com/trilinos/Trilinos",
@@ -66,8 +68,8 @@
       "MAGIC_REPO_COMMIT": "307e22af30f483bb52ec68118454002fb5864fe5",
       "MAGIC_NAME": "magic",
       "IHP_PDK_REPO_URL": "https://github.com/IHP-GmbH/IHP-Open-PDK.git",
-      "IHP_PDK_REPO_COMMIT": "cfc0e22b92306178ebb5a5bc4865afe3294654d0",
-      "IHP_PDK_REPO_BRANCH": "dev",
+      "IHP_PDK_REPO_COMMIT": "e73adb4045731ddec21634146d536380057f6a26",
+      "IHP_PDK_REPO_BRANCH": "main",
       "IHP_PDK_NAME": "ihp-sg13g2",
       "OPENVAF_REPO_URL": "https://github.com/pascalkuthe/OpenVAF.git",
       "OPENVAF_REPO_COMMIT": "a9697ae7780518f021f9f64e819b3a57033bd39f",
