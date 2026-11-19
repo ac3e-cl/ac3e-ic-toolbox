@@ -18,6 +18,7 @@ exclusion_file = root / 'exclusions.json'
 exclusions = json.loads(exclusion_file.read_text()).get('manifest', {}) if exclusion_file.is_file() else {}
 commands = {
     'GNUCAP_NAME': 'gnucap',
+    'GNUCAP_MODELGEN_REPO_URL': 'modelgen-verilog', 'GNUPLOT': 'gnuplot',
     'NGSPICE_NAME': 'ngspice', 'XYCE_NAME': 'Xyce', 'MAGIC_NAME': 'magic',
     'OPENVAF_NAME': 'openvaf', 'KLAYOUT_NAME': 'klayout', 'XSCHEM_NAME': 'xschem',
     'NETGEN_NAME': 'netgen', 'GAW3_XSCHEM_NAME': 'gaw', 'YOSYS_NAME': 'yosys',

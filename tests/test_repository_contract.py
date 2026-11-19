@@ -17,7 +17,7 @@ PDK_JOB_ARGUMENTS = {
     'PDK_BUILD_JOBS': '1',
 }
 
-# Only these GF additions and template fields may differ from the snapshot.
+# Only explicitly authorized changes may differ from the snapshot.
 # Do not refresh the baseline to hide unrelated pin changes.
 GF_ARGUMENTS = {
     'CIEL_VERSION': '3.1.0',
@@ -29,10 +29,18 @@ GF_TEMPLATE_REVISIONS = {
     'librelaneCommit': '99148a9c1e648cdfdb9d7b772481af32e0dfbe8b',
     'pdkCommit': GF_ARGUMENTS['GF180_PDK_COMMIT'],
 }
+IHP_ARGUMENTS = {
+    'IHP_PDK_REPO_COMMIT': 'e73adb4045731ddec21634146d536380057f6a26',
+    'IHP_PDK_REPO_BRANCH': 'main',
+}
+MODELGEN_ARGUMENTS = {
+    'GNUCAP_MODELGEN_REPO_URL': 'https://codeberg.org/gnucap/gnucap-modelgen-verilog.git',
+    'GNUCAP_MODELGEN_REPO_COMMIT': '0c7f045dd88a8a143631a0d2c87a0db2849762c8',
+}
 
 
 class RepositoryContract(unittest.TestCase):
-    def test_only_authorized_gf_pins_change(self):
+    def test_only_authorized_build_pins_change(self):
         # A checked-in snapshot works in shallow clones and source archives too.
         before = BASELINE['manifest']
         after = json.loads((ROOT / 'manifest.json').read_text())
@@ -40,7 +48,8 @@ class RepositoryContract(unittest.TestCase):
         self.assertTrue(PDK_JOB_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
         self.assertTrue(GF_ARGUMENTS.keys().isdisjoint(before['build']['arguments']))
         expected_arguments = {**before['build']['arguments'], **PYTHON_ARGUMENTS,
-                              **PDK_JOB_ARGUMENTS, **GF_ARGUMENTS,
+                              **PDK_JOB_ARGUMENTS, **GF_ARGUMENTS, **IHP_ARGUMENTS,
+                              **MODELGEN_ARGUMENTS,
                               'OPENVAF_REPO_URL': 'https://github.com/pascalkuthe/OpenVAF.git'}
         self.assertEqual(expected_arguments, after['build']['arguments'])
         self.assertEqual(after['librelaneTemplates'], {
@@ -54,10 +63,8 @@ class RepositoryContract(unittest.TestCase):
         self.assertEqual(after['build']['arguments']['OPENVAF_REPO_URL'],
                          'https://github.com/pascalkuthe/OpenVAF.git')
 
-    def test_ihp_pdk_and_template_remain_frozen(self):
+    def test_private_ihp_template_remains_frozen(self):
         manifest = json.loads((ROOT / 'manifest.json').read_text())
-        self.assertEqual(manifest['build']['arguments']['IHP_PDK_REPO_COMMIT'],
-                         'cfc0e22b92306178ebb5a5bc4865afe3294654d0')
         self.assertEqual(manifest['librelaneTemplates']['ihp'],
                          BASELINE['manifest']['librelaneTemplates']['ihp'])
 

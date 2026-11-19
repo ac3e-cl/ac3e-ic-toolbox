@@ -8,10 +8,12 @@ ARG NGSPICE_REPO_URL
 ARG NGSPICE_REPO_COMMIT
 ARG NGSPICE_NAME
 
-# GNUCAP: 20260729-dev
+# Gnucap and modelgen-verilog: 20260729-dev
 ARG GNUCAP_REPO_URL
 ARG GNUCAP_REPO_COMMIT
 ARG GNUCAP_NAME
+ARG GNUCAP_MODELGEN_REPO_URL
+ARG GNUCAP_MODELGEN_REPO_COMMIT
 
 # Xyce
 ARG XYCE_REPO_URL
@@ -35,7 +37,7 @@ ARG MAGIC_REPO_URL
 ARG MAGIC_REPO_COMMIT
 ARG MAGIC_NAME
 
-# IHP Open PDK
+# IHP Open PDK: upstream main (2026-11-10)
 ARG IHP_PDK_REPO_URL
 ARG IHP_PDK_REPO_COMMIT
 ARG IHP_PDK_REPO_BRANCH
@@ -324,12 +326,14 @@ RUN --mount=type=bind,source=images/ngspice,target=/images/ngspice \
     bash /images/ngspice/install.sh
 
 #######################################################################
-# Compile GNUCAP (official standalone build, no heavyweight builder dependencies)
+# Compile Gnucap and its model generator without heavyweight builder dependencies.
 #######################################################################
 FROM common AS gnucap
 ARG GNUCAP_REPO_URL \
     GNUCAP_REPO_COMMIT \
-    GNUCAP_NAME
+    GNUCAP_NAME \
+    GNUCAP_MODELGEN_REPO_URL \
+    GNUCAP_MODELGEN_REPO_COMMIT
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates git build-essential libreadline-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -500,9 +504,9 @@ ARG NGSPICE_REPO_COMMIT \
 RUN --mount=type=bind,source=images/final_structure/install,target=/images/final_structure/install \
     bash /images/final_structure/install/install_klayout.sh
 
-# Install libyaml-cpp for OpenROAD (combined with cleanup)
+# Install libyaml-cpp for OpenROAD and headless gnuplot without GUI dependencies.
 RUN apt-get update && \
-    apt-get install -y libyaml-cpp-dev && \
+    apt-get install -y --no-install-recommends libyaml-cpp-dev gnuplot-nox && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
 
@@ -576,11 +580,6 @@ ENV DESIGNS=/foss/designs
 # Bundled stdio MCP, isolated from the EDA Python environment.
 RUN --mount=type=bind,source=images/mcp,target=/images/mcp \
     bash /images/mcp/install.sh
-
-# Patch IHP PDK for KLayout DRC compatibility
-RUN --mount=type=bind,source=images/final_structure/configure,target=/images/final_structure/configure \
-    cd /images/final_structure/configure/ \
-    && bash patch_pdk_ihp.sh
 
 # Run xschem install.py script as designer user
 USER designer

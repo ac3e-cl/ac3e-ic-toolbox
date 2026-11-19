@@ -62,6 +62,8 @@ entry should show `w/lf`. No global Git configuration change is required.
 | Manifest tool | Functional check |
 | --- | --- |
 | ngspice | NMOS operating points using IHP and GF180 models |
+| modelgen-verilog | Generate C++ from a Verilog-A resistor, compile it, and load the plugin in Gnucap |
+| gnuplot | Render an SVG without an X server |
 | Xyce | Three-point resistor-divider DC sweep with numeric assertions |
 | Open PDKs / IHP PDK | Environment, installed technologies/models; simulation, extraction, DRC and GF180 PCell geometry |
 | Magic | GDS read and extraction of resistors/capacitors |
