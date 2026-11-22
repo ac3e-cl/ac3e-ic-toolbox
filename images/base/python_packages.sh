@@ -11,6 +11,7 @@ export UV_HTTP_TIMEOUT=300
 
 uv pip install --python "$EDA_VENV/bin/python" --strict \
     "numpy<2" \
+    matplotlib \
     gdsfactory \
     glayout \
     cace \
