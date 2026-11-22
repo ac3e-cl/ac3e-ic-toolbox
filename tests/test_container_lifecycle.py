@@ -24,6 +24,8 @@ class ContainerLifecycle(unittest.TestCase):
                                  'Labels': {'org.ac3e.ic-toolbox.mode': stored_mode}}, 'Image': 'sha256:old-image',
                       'Mounts': [{'Source': mount or tmp, 'Destination': '/home/designer/shared'}],
                       'State': {'Running': running}}]
+            if xauth_mount is not None:
+                state[0]['Mounts'].append({'Source': xauth_mount, 'Destination': '/tmp/.Xauthority'})
             (base / 'state.json').write_text(json.dumps(state))
             docker = base / 'docker'
             docker.write_text('''#!/usr/bin/env python3
