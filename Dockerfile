@@ -340,6 +340,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN --mount=type=bind,source=images/gnucap,target=/images/gnucap \
     bash /images/gnucap/install.sh
 
+# Build just the IHP low-voltage MOS plugin against the bundled Gnucap ABI.
+FROM gnucap AS gnucap_ihp_moslv
+ARG IHP_PDK_NAME
+RUN --mount=type=bind,from=ihp_pdk,source=/opt/pdks,target=/ihp-pdks \
+    --mount=type=bind,source=images/gnucap,target=/images/gnucap \
+    LC_ALL=C bash /images/gnucap/build-ihp-moslv.sh \
+    "/ihp-pdks/${IHP_PDK_NAME}/libs.tech" /gnucap-ihp-moslv
+
 #######################################################################
 # Compile xyce
 #######################################################################
@@ -529,6 +537,7 @@ RUN rm -rf ${TOOLS}/common/bin/swig* ${TOOLS}/common/share/swig && \
 COPY --from=ihp_pdk    ${TOOLS}/openvaf             ${TOOLS}/openvaf
 COPY --from=ngspice    ${TOOLS}/ngspice             ${TOOLS}/ngspice
 COPY --from=gnucap /gnucap-dist/usr/local/ /usr/local/
+COPY --from=gnucap_ihp_moslv /gnucap-ihp-moslv/ ${PDK_ROOT}/${IHP_PDK_NAME}/libs.tech/gnucap/plugins/models/
 RUN ldconfig
 COPY --from=xschem     ${TOOLS}/xschem               ${TOOLS}/xschem
 COPY --from=magic      ${TOOLS}/magic               ${TOOLS}/magic
