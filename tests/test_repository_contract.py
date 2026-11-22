@@ -35,7 +35,7 @@ IHP_ARGUMENTS = {
 }
 MODELGEN_ARGUMENTS = {
     'GNUCAP_MODELGEN_REPO_URL': 'https://codeberg.org/gnucap/gnucap-modelgen-verilog.git',
-    'GNUCAP_MODELGEN_REPO_COMMIT': '0c7f045dd88a8a143631a0d2c87a0db2849762c8',
+    'GNUCAP_MODELGEN_REPO_COMMIT': '075f5963896e5dfdd74c2e5f9d1ceaf5f0608c80',
 }
 
 

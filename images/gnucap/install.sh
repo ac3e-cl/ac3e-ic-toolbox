@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 # Official build procedure: https://codeberg.org/gnucap/gnucap/src/branch/develop/INSTALL
-# Snapshot: 20260729-dev, pinned in manifest.json.
+# Gnucap 20260729-dev and Modelgen develop are pinned in manifest.json.
 : "${GNUCAP_REPO_URL:?}" "${GNUCAP_REPO_COMMIT:?}"
 : "${GNUCAP_MODELGEN_REPO_URL:?}" "${GNUCAP_MODELGEN_REPO_COMMIT:?}"
 prefix=/usr/local

@@ -55,7 +55,7 @@
       "GNUCAP_REPO_COMMIT": "bcaff61b3c562179476bb6c5de783676994c61e1",
       "GNUCAP_NAME": "gnucap",
       "GNUCAP_MODELGEN_REPO_URL": "https://codeberg.org/gnucap/gnucap-modelgen-verilog.git",
-      "GNUCAP_MODELGEN_REPO_COMMIT": "0c7f045dd88a8a143631a0d2c87a0db2849762c8",
+      "GNUCAP_MODELGEN_REPO_COMMIT": "075f5963896e5dfdd74c2e5f9d1ceaf5f0608c80",
       "XYCE_REPO_URL": "https://github.com/Xyce/Xyce.git",
       "XYCE_REPO_COMMIT": "Release-7.8.0",
       "XYCE_TRILINOS_REPO_URL": "https://github.com/trilinos/Trilinos",
