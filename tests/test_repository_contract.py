@@ -80,6 +80,10 @@ class RepositoryContract(unittest.TestCase):
         expected_copies = [row for row in BASELINE['copies']
                            if row[1] != '--from=sky130_pdk']
         expected_copies.insert(0, ['COPY', '--from=python_builder', '/opt/python', '/opt/python'])
+        old_gnucap = ['COPY', '--from=gnucap', '${TOOLS}/gnucap', '${TOOLS}/gnucap']
+        expected_copies[expected_copies.index(old_gnucap)] = [
+            'COPY', '--from=gnucap', '/gnucap-dist/usr/local/', '/usr/local/',
+        ]
         self.assertEqual(copies(after), expected_copies)
 
     def test_runtime_config_is_installed_once(self):

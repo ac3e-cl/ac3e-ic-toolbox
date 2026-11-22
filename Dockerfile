@@ -528,7 +528,8 @@ RUN rm -rf ${TOOLS}/common/bin/swig* ${TOOLS}/common/share/swig && \
     find ${TOOLS}/common -type d -name "*gtest*" -exec rm -rf {} + 2>/dev/null || true
 COPY --from=ihp_pdk    ${TOOLS}/openvaf             ${TOOLS}/openvaf
 COPY --from=ngspice    ${TOOLS}/ngspice             ${TOOLS}/ngspice
-COPY --from=gnucap     ${TOOLS}/gnucap              ${TOOLS}/gnucap
+COPY --from=gnucap /gnucap-dist/usr/local/ /usr/local/
+RUN ldconfig
 COPY --from=xschem     ${TOOLS}/xschem               ${TOOLS}/xschem
 COPY --from=magic      ${TOOLS}/magic               ${TOOLS}/magic
 COPY --from=netgen     ${TOOLS}/netgen              ${TOOLS}/netgen
