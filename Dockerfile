@@ -8,7 +8,7 @@ ARG NGSPICE_REPO_URL
 ARG NGSPICE_REPO_COMMIT
 ARG NGSPICE_NAME
 
-# Gnucap and modelgen-verilog: 20260729-dev
+# Gnucap: 20260729-dev; modelgen-verilog: develop at 075f596
 ARG GNUCAP_REPO_URL
 ARG GNUCAP_REPO_COMMIT
 ARG GNUCAP_NAME
@@ -340,6 +340,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN --mount=type=bind,source=images/gnucap,target=/images/gnucap \
     bash /images/gnucap/install.sh
 
+# Build just the IHP low-voltage MOS plugin against the bundled Gnucap ABI.
+FROM gnucap AS gnucap_ihp_moslv
+ARG IHP_PDK_NAME
+RUN --mount=type=bind,from=ihp_pdk,source=/opt/pdks,target=/ihp-pdks \
+    --mount=type=bind,source=images/gnucap,target=/images/gnucap \
+    LC_ALL=C bash /images/gnucap/build-ihp-moslv.sh \
+    "/ihp-pdks/${IHP_PDK_NAME}/libs.tech" /gnucap-ihp-moslv
+
 #######################################################################
 # Compile xyce
 #######################################################################
@@ -528,7 +536,9 @@ RUN rm -rf ${TOOLS}/common/bin/swig* ${TOOLS}/common/share/swig && \
     find ${TOOLS}/common -type d -name "*gtest*" -exec rm -rf {} + 2>/dev/null || true
 COPY --from=ihp_pdk    ${TOOLS}/openvaf             ${TOOLS}/openvaf
 COPY --from=ngspice    ${TOOLS}/ngspice             ${TOOLS}/ngspice
-COPY --from=gnucap     ${TOOLS}/gnucap              ${TOOLS}/gnucap
+COPY --from=gnucap /gnucap-dist/usr/local/ /usr/local/
+COPY --from=gnucap_ihp_moslv /gnucap-ihp-moslv/ ${PDK_ROOT}/${IHP_PDK_NAME}/libs.tech/gnucap/plugins/models/
+RUN ldconfig
 COPY --from=xschem     ${TOOLS}/xschem               ${TOOLS}/xschem
 COPY --from=magic      ${TOOLS}/magic               ${TOOLS}/magic
 COPY --from=netgen     ${TOOLS}/netgen              ${TOOLS}/netgen

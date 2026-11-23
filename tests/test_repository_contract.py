@@ -35,7 +35,7 @@ IHP_ARGUMENTS = {
 }
 MODELGEN_ARGUMENTS = {
     'GNUCAP_MODELGEN_REPO_URL': 'https://codeberg.org/gnucap/gnucap-modelgen-verilog.git',
-    'GNUCAP_MODELGEN_REPO_COMMIT': '0c7f045dd88a8a143631a0d2c87a0db2849762c8',
+    'GNUCAP_MODELGEN_REPO_COMMIT': '075f5963896e5dfdd74c2e5f9d1ceaf5f0608c80',
 }
 
 
@@ -76,10 +76,18 @@ class RepositoryContract(unittest.TestCase):
         expected_stages = list(BASELINE['stages'])
         expected_stages.remove('sky130_pdk')
         expected_stages.insert(expected_stages.index('base'), 'python_builder')
+        expected_stages.insert(expected_stages.index('gnucap') + 1, 'gnucap_ihp_moslv')
         self.assertEqual(stages(after), expected_stages)
         expected_copies = [row for row in BASELINE['copies']
                            if row[1] != '--from=sky130_pdk']
         expected_copies.insert(0, ['COPY', '--from=python_builder', '/opt/python', '/opt/python'])
+        old_gnucap = ['COPY', '--from=gnucap', '${TOOLS}/gnucap', '${TOOLS}/gnucap']
+        gnucap_idx = expected_copies.index(old_gnucap)
+        expected_copies[gnucap_idx:gnucap_idx + 1] = [
+            ['COPY', '--from=gnucap', '/gnucap-dist/usr/local/', '/usr/local/'],
+            ['COPY', '--from=gnucap_ihp_moslv', '/gnucap-ihp-moslv/',
+             '${PDK_ROOT}/${IHP_PDK_NAME}/libs.tech/gnucap/plugins/models/'],
+        ]
         self.assertEqual(copies(after), expected_copies)
 
     def test_runtime_config_is_installed_once(self):

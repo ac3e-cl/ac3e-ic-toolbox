@@ -56,6 +56,12 @@ class PythonRuntime(unittest.TestCase):
         self.assertNotIn('uv pip install --system', installer)
         self.assertIn('uv pip check', installer)
 
+    def test_matplotlib_is_a_direct_default_eda_dependency(self):
+        installer = (ROOT / 'images/base/python_packages.sh').read_text()
+        install = installer.split('uv pip install --python "$EDA_VENV/bin/python" --strict', 1)[1]
+        packages = install.split('uv pip check', 1)[0]
+        self.assertRegex(packages, r'(?m)^ +matplotlib +\\$')
+
     def test_python_source_is_verified_and_system_python_is_not_relinked(self):
         installer = ROOT / 'images/python/install.sh'
         self.assertTrue(installer.is_file(), 'side-by-side Python installer missing')

@@ -2,9 +2,15 @@
 set -euo pipefail
 TEST_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$TEST_ROOT/common.sh"
-load_design_env
-require_command modelgen-verilog
-require_command gnucap-conf
+unset LD_LIBRARY_PATH GNUCAP_PLUGPATH
+for executable in gnucap gnucap-conf gnucap-mg-vams modelgen-verilog; do
+    require_command "$executable"
+    [[ $(command -v "$executable") == "/usr/local/bin/$executable" ]] || fail "$executable not in /usr/local/bin"
+done
+for lookup in --includedir --libdir --pkglibdir; do
+    directory=$(gnucap-conf "$lookup")
+    [[ $directory == /usr/local/* && -d $directory ]] || fail "gnucap-conf $lookup points to invalid directory: $directory"
+done
 
 work="$TEST_ROOT/run/analog/gnucap-modelgen-verilog"
 mkdir -p "$work"
