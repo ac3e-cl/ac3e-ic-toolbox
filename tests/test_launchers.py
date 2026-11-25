@@ -29,12 +29,14 @@ class Launchers(unittest.TestCase):
         result = self.launch('shell', 'printf', 'a b', '*', CONTAINER_USER='12345', CONTAINER_GROUP='23456')
         self.assertEqual(result.returncode, 0, result.stderr)
         argv = json.loads(result.stdout)
-        self.assertIn('12345:23456', argv)
+        self.assertIn('org.ac3e.ic-toolbox.identity=12345:23456:home-links-v1', argv)
+        self.assertEqual(argv[argv.index('--user') + 1], '0:0')
         self.assertIn('HOME=/tmp/ac3e-ic-toolbox-home', argv)
         self.assertIn('/tmp/ac3e-ic-toolbox-home:rw,nosuid,nodev,mode=0700,uid=12345,gid=23456', argv)
         self.assertIn('--entrypoint', argv)
         self.assertEqual(argv[-4:], ['--shell', 'printf', 'a b', '*'])
         self.assertNotIn('chown', ' '.join(argv))
+        self.assertEqual(argv[argv.index('--workdir') + 1], '/tmp/ac3e-ic-toolbox-home')
 
     def test_test_mode_has_separate_mounts_and_no_terminal(self):
         result = subprocess.run(
@@ -133,7 +135,8 @@ class Launchers(unittest.TestCase):
             path = Path(tmp)
             name = 'launcher-regression'
             state = [{'Config': {'Image': f'isaiash/ac3e-ic-toolbox:{VERSION}' if compatible else 'other:image',
-                                 'Env': ['DISPLAY=' + stored_display]},
+                                 'Env': ['DISPLAY=' + stored_display],
+                                 'Labels': {'org.ac3e.ic-toolbox.identity': f'{os.getuid()}:{os.getgid()}:home-links-v1'}},
                       'Mounts': [{'Source': tmp, 'Destination': '/home/designer/shared'},
                                  {'Source': '/tmp/.X11-unix', 'Destination': '/tmp/.X11-unix'}],
                       'State': {'Running': running}}]
@@ -178,7 +181,7 @@ class Launchers(unittest.TestCase):
     def test_start_running_container_executes_shell_without_recreating(self):
         result, calls = self.existing_container(running=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(calls[-1], ['exec', '-it', 'launcher-regression', '/bin/bash'])
+        self.assertEqual(calls[-1], ['exec', '--user', f'{os.getuid()}:{os.getgid()}', '-it', 'launcher-regression', '/bin/bash'])
 
     def test_docker_failure_status_is_propagated(self):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:

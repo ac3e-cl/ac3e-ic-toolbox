@@ -8,8 +8,9 @@ esac
 docker_env=()
 if (( windows )); then docker_env=(env MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'); fi
 # Scope conversion protection to Docker, never to Python/PowerShell helpers.
-docker() { command "${docker_env[@]}" docker "$@"; }
-docker_exec() { exec "${docker_env[@]}" docker "$@"; }
+# Bash 3.2 treats an empty array as unset under nounset.
+docker() { command ${docker_env[@]+"${docker_env[@]}"} docker "$@"; }
+docker_exec() { exec ${docker_env[@]+"${docker_env[@]}"} docker "$@"; }
 execute_argv() {
     if [[ ${argv[0]} == docker ]]; then docker_exec "${argv[@]:1}"
     else exec "${argv[@]}"; fi
@@ -30,7 +31,7 @@ if [[ -f $env_file ]]; then
             [[ ${#value} -ge 2 && ${value: -1} == "$quote" ]] || { echo 'Unterminated .env value' >&2; exit 2; }
             value=${value:1:${#value}-2}
         fi
-        [[ -v $key ]] || export "$key=$value"
+        [[ ${!key+x} ]] || export "$key=$value"
     done < "$env_file"
 fi
 registry=${DOCKER_REGISTRY-$(jq -r .image.registry "$root/manifest.json")}
@@ -97,12 +98,16 @@ name=${CONTAINER_NAME:-$project}
 # Integration runs are disposable and must never replace the user's container.
 [[ $mode != test ]] || name=${CONTAINER_NAME:-$project-test-$$}
 
-argv=(docker run --pull=never --name "$name" --user "$uid:$gid" --mount "type=bind,source=$designs,target=/home/designer/shared" --mount "type=bind,source=$root/tests,target=/home/designer/tests" --env SHELL=/bin/bash --env "PDK=${PDK:-ihp-sg13g2}")
+# Only the identity bootstrap runs as root; it drops to the requested UID/GID
+# before loading any user configuration or starting tools.
+argv=(docker run --pull=never --name "$name" --user 0:0 --mount "type=bind,source=$designs,target=/home/designer/shared" --mount "type=bind,source=$root/tests,target=/home/designer/tests" --env SHELL=/bin/bash --env "PDK=${PDK:-ihp-sg13g2}")
+runtime_identity=$uid:$gid:home-links-v1
+argv+=(--label "org.ac3e.ic-toolbox.identity=$runtime_identity")
 session_mode=$mode
 [[ $mode != attach ]] || session_mode=x
 argv+=(--label "org.ac3e.ic-toolbox.mode=$session_mode")
 for setting in STD_CELL_LIBRARY VNC_PW VNC_RESOLUTION TEST_TIMEOUT; do
-    [[ ! -v $setting ]] || argv+=(--env "$setting=${!setting}")
+    [[ ! ${!setting+x} ]] || argv+=(--env "$setting=${!setting}")
 done
 port() {
     local value=$1 target=$2
@@ -164,12 +169,20 @@ if [[ -n ${DOCKER_EXTRA_PARAMS:-} ]]; then
     read -r -a extra <<< "$DOCKER_EXTRA_PARAMS"
     argv+=("${extra[@]}")
 fi
-# A container-private home avoids changing either image ownership or host data.
-# Keep the installed single-user Nix profile as a read-only executable source.
-# Image prerequisite: /home/designer must be traversable by arbitrary UIDs.
-bootstrap='set -eu; ln -s /home/designer/.nix-profile "$HOME/.nix-profile"; cp /home/designer/.bashrc "$HOME/.bashrc"; exec /entrypoint.sh "$@"'
-argv+=(--tmpfs "/tmp/ac3e-ic-toolbox-home:rw,nosuid,nodev,mode=0700,uid=$uid,gid=$gid" --env HOME=/tmp/ac3e-ic-toolbox-home --entrypoint /bin/bash)
-argv+=("$reference" --noprofile --norc -c "$bootstrap" ac3e-ic-toolbox-home)
+# Register unknown host UIDs in the container's private passwd database. Do not
+# use usermod/chown: the image home, Nix store and host mounts stay untouched.
+bootstrap='set -eu
+uid=$1; gid=$2; shift 2
+if ! getent passwd "$uid" >/dev/null; then
+    passwd_file=$(mktemp)
+    awk -F: -v OFS=: -v uid="$uid" -v gid="$gid" -v home="$HOME" '\''$1 == "designer" {$3=uid; $4=gid; $6=home; $7="/bin/bash"} {print}'\'' /etc/passwd > "$passwd_file"
+    cat "$passwd_file" > /etc/passwd
+    rm "$passwd_file"
+fi
+export USER=$(id -nu "$uid") LOGNAME=$(id -nu "$uid")
+exec setpriv --reuid "$uid" --regid "$gid" --clear-groups /bin/bash --noprofile --norc -c '\''set -eu; ln -s /home/designer/.nix-profile "$HOME/.nix-profile"; ln -s /home/designer/shared "$HOME/shared"; ln -s /home/designer/tests "$HOME/tests"; cp /home/designer/.bashrc "$HOME/.bashrc"; exec /entrypoint.sh "$@"'\'' ac3e-ic-toolbox-session "$@"'
+argv+=(--tmpfs "/tmp/ac3e-ic-toolbox-home:rw,nosuid,nodev,mode=0700,uid=$uid,gid=$gid" --env HOME=/tmp/ac3e-ic-toolbox-home --workdir /tmp/ac3e-ic-toolbox-home --entrypoint /bin/bash)
+argv+=("$reference" --noprofile --norc -c "$bootstrap" ac3e-ic-toolbox-home "$uid" "$gid")
 case $mode in
     shell|x|attach) argv+=(--shell); if (( $# )); then argv+=("$@"); else argv+=(/bin/bash); fi;;
     vnc) argv+=(--vnc --wait "$@");;
@@ -186,7 +199,7 @@ show() {
     local -a diagnostic=()
     local arg lower hide_next=0
     for arg in "${argv[@]}"; do
-        lower=${arg,,}
+        lower=$(printf '%s' "$arg" | LC_ALL=C tr '[:upper:]' '[:lower:]')
         if (( hide_next )); then diagnostic+=('[REDACTED]'); hide_next=0
         elif [[ $lower == *token* || $lower == *password* || $lower == *vnc_pw* ]]; then
             if [[ $arg == *=* ]]; then diagnostic+=("${arg%%=*}=[REDACTED]")
@@ -253,7 +266,8 @@ print(json.dumps(state))
     fi
     metadata=$(python3 -c 'import json,sys; c=json.load(sys.stdin)[0]; print(c["Config"]["Image"]); print(int(c["State"]["Running"])); print(int(any(m.get("Source")==sys.argv[1] and m.get("Destination")=="/home/designer/shared" for m in c.get("Mounts",[]))))' "$designs" <<< "$state")
     if (( windows )); then metadata=${metadata//$'\r'/}; fi
-    mapfile -t fields <<< "$metadata"
+    fields=()
+    while IFS= read -r field; do fields+=("$field"); done <<< "$metadata"
     current_reference=${fields[0]}
     running=${fields[1]}
     if [[ $mode == x && $current_reference == "$reference" ]]; then
@@ -296,7 +310,10 @@ print(json.dumps(state))
     replace=0
     refresh=0
     update_reason=
-    if (( stale_auth )); then
+    stored_identity=$(jq -r '.[0].Config.Labels["org.ac3e.ic-toolbox.identity"] // empty' <<< "$state")
+    if [[ $stored_identity != "$runtime_identity" ]]; then
+        update_reason='to apply the corrected runtime user and writable working directory'
+    elif (( stale_auth )); then
         printf 'Recreating %s: its X authority mount (%s) no longer exists; Xwayland likely restarted since the container was created.\n' "$name" "$auth_source" >&2
         replace=1
     elif [[ $current_reference != "$reference" ]]; then
@@ -309,7 +326,7 @@ print(json.dumps(state))
             update_reason="to the locally installed image for $reference"
         elif [[ $(jq '.[0].RepoDigests // [] | length' <<< "$local_image") -gt 0 ]]; then
             # Metadata only; never download layers before the user agrees.
-            if remote_manifest=$(timeout 10 "${docker_env[@]}" docker buildx imagetools inspect "$reference" --format '{{json .Manifest}}' 2>/dev/null); then
+            if remote_manifest=$(timeout 10 ${docker_env[@]+"${docker_env[@]}"} docker buildx imagetools inspect "$reference" --format '{{json .Manifest}}' 2>/dev/null); then
                 remote_digest=$(jq -r '.digest // empty' <<< "$remote_manifest")
                 if [[ -n $remote_digest ]] && ! jq -e --arg digest "$remote_digest" '.[0].RepoDigests // [] | any(endswith("@" + $digest))' <<< "$local_image" >/dev/null; then
                     update_reason="to the published update for $reference"
@@ -341,7 +358,7 @@ print(json.dumps(state))
     else
         if [[ $running == 1 ]]; then
             case $mode in
-                shell|x|attach) if (( $# )); then docker_exec exec -it "$name" "$@"; else docker_exec exec -it "$name" /bin/bash; fi;;
+                shell|x|attach) if (( $# )); then docker_exec exec --user "$uid:$gid" -it "$name" "$@"; else docker_exec exec --user "$uid:$gid" -it "$name" /bin/bash; fi;;
                 vnc|jupyter) printf 'Container %s is already running.\n' "$name"; exit 0;;
             esac
         fi

@@ -82,7 +82,8 @@ elif args[:2] == ['container', 'inspect']:
 
     def state(self, source=None, **state):
         return {'Config': {'Image': 'windows-regression:test', 'Env': [],
-                           'Labels': {'org.ac3e.ic-toolbox.mode': 'vnc'}},
+                           'Labels': {'org.ac3e.ic-toolbox.mode': 'vnc',
+                                      'org.ac3e.ic-toolbox.identity': '1000:1000:home-links-v1'}},
                 'State': {'Running': False, 'Status': 'exited', 'StartedAt': '2026-01-01T00:00:00Z', **state},
                 'Mounts': [{'Source': source or self.directory.as_posix(),
                             'Destination': '/home/designer/shared'}]}

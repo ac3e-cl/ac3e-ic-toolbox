@@ -210,7 +210,15 @@ directory (default: the initially empty `shared/`); `DESIGNS` is also supported.
 directories. Shells use the host UID/GID by default (`CONTAINER_USER` and
 `CONTAINER_GROUP` override them); `ROOT=1` explicitly requests root.
 Launchers provide a private, ephemeral tmpfs HOME owned by that UID/GID and
-reuse the installed Nix profile for executable access. Designs persist in the
+start there, with `~/shared` and `~/tests` linking to the existing design and test
+mounts, reusing the installed Nix profile for executable access. A short
+root bootstrap registers unknown UIDs as `designer` in the container-local
+passwd database, then drops to the requested UID/GID before loading shell
+configuration or running tools. Launcher attach commands also select that UID/GID
+explicitly; a direct `docker exec` must pass `--user UID:GID` to avoid the bootstrap
+root default. Existing containers require confirmation before recreation to
+apply this identity setup; internal files are discarded, mounted designs are preserved.
+Designs persist in the
 project mount; HOME settings disappear when the container stops. The image home
 permits traversal, not listing or writing, for other users. Direct `docker run
 --user` calls must provide equivalent HOME configuration; use the launchers.

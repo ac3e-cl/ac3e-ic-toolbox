@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 class ContainerLifecycle(unittest.TestCase):
     def scenario(self, *, image='old:1', running=False, answer=None, local=True,
                  remote='sha256:old', pull_fails=False, no_pull=False, mount=None, stored_mode='x',
-                 local_id='sha256:old-image', mode='x', repo_digests=None, xauth_mount=None):
+                 local_id='sha256:old-image', mode='x', repo_digests=None, xauth_mount=None,
+                 identity=True):
         with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR')) as tmp:
             base = Path(tmp)
             manifest = json.loads((ROOT / 'manifest.json').read_text())
@@ -21,7 +22,8 @@ class ContainerLifecycle(unittest.TestCase):
             if image == 'current':
                 image = reference
             state = [{'Config': {'Image': image, 'Env': ['DISPLAY=:0'] if stored_mode == 'x' else [],
-                                 'Labels': {'org.ac3e.ic-toolbox.mode': stored_mode}}, 'Image': 'sha256:old-image',
+                                 'Labels': {'org.ac3e.ic-toolbox.mode': stored_mode,
+                                            'org.ac3e.ic-toolbox.identity': f'{os.getuid()}:{os.getgid()}:home-links-v1' if identity else ''}}, 'Image': 'sha256:old-image',
                       'Mounts': [{'Source': mount or tmp, 'Destination': '/home/designer/shared'}],
                       'State': {'Running': running}}]
             if xauth_mount is not None:
@@ -100,7 +102,7 @@ else: sys.exit(8)
     def test_raw_shell_can_reuse_x_capable_container(self):
         code, output, calls = self.scenario(image='current', stored_mode='x', mode='shell', running=True)
         self.assertEqual(code, 0, output)
-        self.assertEqual(calls[-1], ['exec', '-it', 'ac3e-ic-toolbox', '/bin/bash'])
+        self.assertEqual(calls[-1], ['exec', '--user', f'{os.getuid()}:{os.getgid()}', '-it', 'ac3e-ic-toolbox', '/bin/bash'])
 
     def test_local_build_without_digests_never_probes_registry(self):
         code, output, calls = self.scenario(image='current', answer='y', repo_digests=[], remote='sha256:new')
@@ -173,12 +175,12 @@ else: sys.exit(8)
                                              xauth_mount='/does/not/exist')
         self.assertEqual(code, 0, output)
         self.assertFalse(any(a[:2] == ['container', 'rm'] for a in calls))
-        self.assertEqual(calls[-1], ['exec', '-it', 'ac3e-ic-toolbox', '/bin/bash'])
+        self.assertEqual(calls[-1], ['exec', '--user', f'{os.getuid()}:{os.getgid()}', '-it', 'ac3e-ic-toolbox', '/bin/bash'])
 
     def test_running_same_version_opens_another_shell(self):
         code, output, calls = self.scenario(image='current', running=True)
         self.assertEqual(code, 0, output)
-        self.assertEqual(calls[-1], ['exec', '-it', 'ac3e-ic-toolbox', '/bin/bash'])
+        self.assertEqual(calls[-1], ['exec', '--user', f'{os.getuid()}:{os.getgid()}', '-it', 'ac3e-ic-toolbox', '/bin/bash'])
 
     def test_registry_unavailable_keeps_current_container(self):
         code, output, calls = self.scenario(image='current', answer='y', remote='offline')
@@ -197,6 +199,15 @@ else: sys.exit(8)
         code, output, calls = self.scenario(image='current', answer='y', mount='/other')
         self.assertEqual(code, 2, output)
         self.assertFalse(any(a[0] in ('run', 'exec') or a[:2] == ['container', 'rm'] for a in calls))
+
+    def test_old_identity_requires_consent_before_replacement(self):
+        for answer, expected in ((None, 2), ('n', 0), ('y', 0)):
+            with self.subTest(answer=answer):
+                code, output, calls = self.scenario(image='current', mode='shell',
+                                                    identity=False, answer=answer)
+                self.assertEqual(code, expected, output)
+                self.assertEqual(any(a[:2] == ['container', 'rm'] for a in calls), answer == 'y')
+                self.assertFalse(any(a[0] == 'exec' or a[:2] == ['container', 'start'] for a in calls))
 
     def test_default_name_is_manifest_name_not_mode_or_uid(self):
         for mode in ('x', 'shell', 'attach', 'vnc', 'jupyter'):

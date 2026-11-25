@@ -1,6 +1,6 @@
 """Opt-in real-image UID gate: UID_RUNTIME_IMAGE=... python3 -m unittest discover -s tests -p test_uid_runtime.py -v.
 
-No builds, host mounts, or image filesystem permission/ownership changes.
+No builds, host design mounts, or host permission/ownership changes.
 """
 import json
 import os
@@ -18,23 +18,29 @@ class UIDRuntime(unittest.TestCase):
         env.update(ENV_FILE='/dev/null', DRY_RUN='1', DOCKER_REGISTRY='',
                    DOCKER_USER='', DOCKER_IMAGE=os.environ['UID_RUNTIME_IMAGE'].rsplit(':', 1)[0],
                    DOCKER_TAG=os.environ['UID_RUNTIME_IMAGE'].rsplit(':', 1)[1])
-        for uid, gid in (('12345', '23456'), ('1000', '1000'), ('0', '0')):
+        for uid, gid in (('501', '20'), ('12345', '23456'), ('1000', '1000'), ('0', '0')):
             with self.subTest(uid=uid, gid=gid):
                 env.update(CONTAINER_USER=uid, CONTAINER_GROUP=gid)
                 command = ['bash', str(ROOT / 'start_shell.sh'), '--print-json',
                            'bash', '--noprofile', '--norc', '-c',
                            'set -eu; test "$HOME" = /tmp/ac3e-ic-toolbox-home; '
+                           'whoami; test "$(pwd)" = "$HOME"; ls -A . >/dev/null; '
+                           'test "$(id -u):$(id -g)" = "$1:$2"; '
                            'test "$(stat -c %u:%g "$HOME")" = "$(id -u):$(id -g)"; '
                            'test "$(stat -c %a "$HOME")" = 700; '
                            'touch "$HOME/write-probe"; '
+                           'test "$(readlink "$HOME/shared")" = /home/designer/shared; '
+                           'test "$(readlink "$HOME/tests")" = /home/designer/tests; '
                            'test -r "$HOME/.nix-profile/etc/profile.d/nix.sh"; '
                            'test -x "$HOME/.nix-profile/bin/librelane"; '
-                           'test -z "${LD_LIBRARY_PATH:-}"; librelane --version']
+                           'test -z "${LD_LIBRARY_PATH:-}"; librelane --version',
+                           'uid-regression', uid, gid]
                 dry = subprocess.run(command, env=env, capture_output=True, text=True, check=True)
                 argv = json.loads(dry.stdout)
                 # Do not expose designs or require a TTY; use only private tmpfs.
-                index = argv.index('--mount')
-                del argv[index:index + 2]
+                while '--mount' in argv:
+                    index = argv.index('--mount')
+                    del argv[index:index + 2]
                 argv.remove('-it')
                 index = argv.index('--name')
                 del argv[index:index + 2]
